@@ -101,6 +101,7 @@ shortcuts = [
 - **Logging**: Comprehensive logging system for debugging issues
 - **Connection Testing**: Built-in utilities to test Home Assistant connectivity
 - **Raspberry Pi Integration**: Automatic hardware detection with fullscreen mode and safe shutdown functionality
+- **Auto-Update System**: Automatic version checking and updates from GitHub repository (Raspberry Pi only)
 
 ### Command Line Options
 - `--fullscreen`: Start in fullscreen mode
@@ -181,6 +182,49 @@ echo "$USER ALL=(ALL) NOPASSWD: /sbin/shutdown" | sudo tee /etc/sudoers.d/kiosk-
 ```
 
 This allows the kiosk user to safely shutdown the Pi without entering a password.
+
+## Auto-Update System (Raspberry Pi)
+
+The kiosk browser includes an automatic update system that checks for new versions from the GitHub repository:
+
+### Features:
+- **Automatic Detection**: Checks for updates on every startup
+- **Configurable**: Enable/disable automatic updates via configuration file
+- **Safe Updates**: Creates backups before applying updates
+- **Dependency Management**: Automatically updates Python dependencies when needed
+- **Logging**: Comprehensive logging of all update activities
+
+### Configuration:
+
+Edit `update_config.conf` to customize update behavior:
+
+```bash
+# Enable automatic update checking (true/false)
+AUTO_UPDATE_CHECK=true
+
+# Apply updates automatically without user prompt (true/false)
+AUTO_UPDATE_APPLY=false
+
+# Maximum time to wait for update check (seconds)
+UPDATE_TIMEOUT=30
+```
+
+### Manual Update Check:
+
+```bash
+# Check for updates manually
+./update_check.sh
+
+# View update logs
+tail -f /var/log/kiosk-update.log
+```
+
+### Disabling Auto-Updates:
+
+To disable automatic updates, edit `update_config.conf`:
+```bash
+AUTO_UPDATE_CHECK=false
+```
 
 ## Customizing Shortcuts
 

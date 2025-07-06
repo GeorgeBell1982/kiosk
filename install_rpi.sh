@@ -38,6 +38,11 @@ echo "Installing Python dependencies..."
 
 # Make scripts executable
 chmod +x start_kiosk.sh
+chmod +x update_check.sh
+
+# Create update log file with proper permissions
+sudo touch /var/log/kiosk-update.log
+sudo chown $USER:$USER /var/log/kiosk-update.log
 
 # Set up autostart
 echo "Setting up autostart..."
