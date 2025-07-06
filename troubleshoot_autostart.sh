@@ -30,20 +30,49 @@ echo "Autostart Configuration:"
 AUTOSTART_DIR="$HOME/.config/autostart"
 KIOSK_DESKTOP="$AUTOSTART_DIR/kiosk-browser.desktop"
 
+# Check for LXDE-pi autostart (legacy method)
+LXDE_AUTOSTART_DIR="$HOME/.config/lxsession/LXDE-pi"
+LXDE_AUTOSTART="$LXDE_AUTOSTART_DIR/autostart"
+
+echo "Checking autostart methods:"
+
+# XDG autostart method
 if [ -d "$AUTOSTART_DIR" ]; then
-    echo "✓ Autostart directory exists: $AUTOSTART_DIR"
+    echo "✓ XDG autostart directory exists: $AUTOSTART_DIR"
 else
-    echo "✗ Autostart directory missing: $AUTOSTART_DIR"
+    echo "✗ XDG autostart directory missing: $AUTOSTART_DIR"
     echo "  Creating directory..."
     mkdir -p "$AUTOSTART_DIR"
 fi
 
 if [ -f "$KIOSK_DESKTOP" ]; then
-    echo "✓ Kiosk desktop file exists: $KIOSK_DESKTOP"
+    echo "✓ XDG desktop file exists: $KIOSK_DESKTOP"
     echo "  Contents:"
     cat "$KIOSK_DESKTOP" | sed 's/^/    /'
 else
-    echo "✗ Kiosk desktop file missing: $KIOSK_DESKTOP"
+    echo "✗ XDG desktop file missing: $KIOSK_DESKTOP"
+fi
+
+# LXDE-pi autostart method (legacy)
+if [ -d "$LXDE_AUTOSTART_DIR" ]; then
+    echo "✓ LXDE-pi autostart directory exists: $LXDE_AUTOSTART_DIR"
+    if [ -f "$LXDE_AUTOSTART" ]; then
+        echo "✓ LXDE-pi autostart file exists: $LXDE_AUTOSTART"
+        echo "  Contents:"
+        cat "$LXDE_AUTOSTART" | sed 's/^/    /'
+        
+        # Check if our kiosk is already in the LXDE autostart
+        if grep -q "kiosk" "$LXDE_AUTOSTART" 2>/dev/null; then
+            echo "✓ Kiosk browser found in LXDE autostart"
+        else
+            echo "✗ Kiosk browser not found in LXDE autostart"
+        fi
+    else
+        echo "✗ LXDE-pi autostart file missing: $LXDE_AUTOSTART"
+    fi
+else
+    echo "✗ LXDE-pi autostart directory missing: $LXDE_AUTOSTART_DIR"
+    echo "  This is normal if not using LXDE-pi desktop environment"
 fi
 echo
 
@@ -99,6 +128,31 @@ else
     echo "⚠ User systemd session may not be running"
 fi
 
+# Check for LXDE-pi autostart (legacy method)
+LXDE_AUTOSTART_DIR="$HOME/.config/lxsession/LXDE-pi"
+LXDE_AUTOSTART_FILE="$LXDE_AUTOSTART_DIR/autostart"
+
+echo "LXDE Autostart Check (Legacy Method):"
+if [ -d "$LXDE_AUTOSTART_DIR" ]; then
+    echo "✓ LXDE-pi directory exists: $LXDE_AUTOSTART_DIR"
+    if [ -f "$LXDE_AUTOSTART_FILE" ]; then
+        echo "✓ LXDE autostart file exists: $LXDE_AUTOSTART_FILE"
+        if grep -q "kiosk" "$LXDE_AUTOSTART_FILE" 2>/dev/null; then
+            echo "✓ Kiosk entry found in LXDE autostart"
+            echo "  Kiosk entries:"
+            grep "kiosk" "$LXDE_AUTOSTART_FILE" | sed 's/^/    /'
+        else
+            echo "✗ No kiosk entry found in LXDE autostart"
+        fi
+    else
+        echo "✗ LXDE autostart file missing: $LXDE_AUTOSTART_FILE"
+    fi
+else
+    echo "✗ LXDE-pi directory not found: $LXDE_AUTOSTART_DIR"
+    echo "  This is normal for newer Raspberry Pi OS versions"
+fi
+echo
+
 # Check for conflicting desktop files
 CONFLICTING_FILES=(
     "$HOME/.config/autostart/chromium-browser.desktop"
@@ -145,11 +199,19 @@ echo "   gtk-launch kiosk-browser.desktop"
 echo
 
 # Offer to recreate autostart file
-read -p "Would you like to recreate the autostart file? (y/N): " -r
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "Recreating autostart file..."
-    
-    cat > "$KIOSK_DESKTOP" << EOF
+echo "Setup Options:"
+echo "1. Recreate XDG autostart file (recommended for newer Pi OS)"
+echo "2. Set up legacy LXDE autostart (for older Pi OS versions)"
+echo "3. Exit without changes"
+echo
+
+read -p "Choose an option (1-3): " -r choice
+
+case $choice in
+    1)
+        echo "Recreating XDG autostart file..."
+        
+        cat > "$KIOSK_DESKTOP" << EOF
 [Desktop Entry]
 Type=Application
 Name=Office Kiosk Browser
@@ -163,8 +225,55 @@ StartupNotify=false
 Terminal=false
 Categories=Network;WebBrowser;
 EOF
+        
+        echo "✓ XDG autostart file recreated"
+        echo "  File: $KIOSK_DESKTOP"
+        echo "  Reboot to test autostart"
+        ;;
     
-    echo "✓ Autostart file recreated"
-    echo "  File: $KIOSK_DESKTOP"
-    echo "  Reboot to test autostart"
-fi
+    2)
+        echo "Setting up legacy LXDE autostart..."
+        
+        # Create LXDE autostart directory if it doesn't exist
+        mkdir -p "$LXDE_AUTOSTART_DIR"
+        
+        # Create or update the LXDE autostart file
+        if [ ! -f "$LXDE_AUTOSTART_FILE" ]; then
+            # Create new file with default LXDE entries
+            cat > "$LXDE_AUTOSTART_FILE" << EOF
+@lxpanel --profile LXDE-pi
+@pcmanfm --desktop --profile LXDE-pi
+@xscreensaver -no-splash
+EOF
+        fi
+        
+        # Add kiosk entry if not already present
+        if ! grep -q "kiosk" "$LXDE_AUTOSTART_FILE" 2>/dev/null; then
+            echo "@sh -c 'sleep 10 && cd $SCRIPT_DIR && $START_SCRIPT'" >> "$LXDE_AUTOSTART_FILE"
+            echo "✓ Added kiosk entry to LXDE autostart"
+        else
+            echo "⚠ Kiosk entry already exists in LXDE autostart"
+        fi
+        
+        # Add onboard (on-screen keyboard) as the last entry if not already present
+        if ! grep -q "@onboard" "$LXDE_AUTOSTART_FILE" 2>/dev/null; then
+            echo "@onboard" >> "$LXDE_AUTOSTART_FILE"
+            echo "✓ Added onboard (on-screen keyboard) to LXDE autostart"
+        else
+            echo "⚠ Onboard entry already exists in LXDE autostart"
+        fi
+        
+        echo "✓ Legacy LXDE autostart configured"
+        echo "  File: $LXDE_AUTOSTART_FILE"
+        echo "  Note: This method works best with older Raspberry Pi OS versions"
+        echo "  Reboot to test autostart"
+        ;;
+    
+    3)
+        echo "No changes made."
+        ;;
+    
+    *)
+        echo "Invalid option. No changes made."
+        ;;
+esac

@@ -98,9 +98,68 @@ sudo chown $USER:$USER /var/log/kiosk-update.log
 
 # Set up autostart
 echo "Setting up autostart..."
-mkdir -p ~/.config/autostart
 
-cat > ~/.config/autostart/kiosk-browser.desktop << EOF
+# Ask user which autostart method to use
+echo "Choose autostart method:"
+echo "1. Modern XDG autostart (recommended for newer Pi OS)"
+echo "2. Legacy LXDE autostart (for older Pi OS versions)"
+echo "3. Both XDG and systemd user service (most reliable)"
+echo
+
+read -p "Choose option (1-3) [default: 3]: " -r autostart_choice
+autostart_choice=${autostart_choice:-3}
+
+case $autostart_choice in
+    1)
+        echo "Setting up XDG autostart..."
+        mkdir -p ~/.config/autostart
+
+        cat > ~/.config/autostart/kiosk-browser.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=Office Kiosk Browser
+Comment=Touchscreen-friendly browser for Raspberry Pi kiosk
+Exec=${PWD}/start_kiosk.sh
+Path=${PWD}
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+StartupNotify=false
+Terminal=false
+Categories=Network;WebBrowser;
+EOF
+        echo "✓ XDG autostart configured"
+        ;;
+        
+    2)
+        echo "Setting up legacy LXDE autostart..."
+        LXDE_AUTOSTART_DIR="$HOME/.config/lxsession/LXDE-pi"
+        LXDE_AUTOSTART_FILE="$LXDE_AUTOSTART_DIR/autostart"
+        
+        mkdir -p "$LXDE_AUTOSTART_DIR"
+        
+        # Create or update the LXDE autostart file
+        if [ ! -f "$LXDE_AUTOSTART_FILE" ]; then
+            # Create new file with default LXDE entries
+            cat > "$LXDE_AUTOSTART_FILE" << EOF
+@lxpanel --profile LXDE-pi
+@pcmanfm --desktop --profile LXDE-pi
+@xscreensaver -no-splash
+EOF
+        fi
+        
+        # Add kiosk entry if not already present
+        if ! grep -q "kiosk" "$LXDE_AUTOSTART_FILE" 2>/dev/null; then
+            echo "@sh -c 'sleep 10 && cd ${PWD} && ${PWD}/start_kiosk.sh'" >> "$LXDE_AUTOSTART_FILE"
+        fi
+        echo "✓ Legacy LXDE autostart configured"
+        ;;
+        
+    3)
+        echo "Setting up dual autostart (XDG + systemd)..."
+        mkdir -p ~/.config/autostart
+
+        cat > ~/.config/autostart/kiosk-browser.desktop << EOF
 [Desktop Entry]
 Type=Application
 Name=Office Kiosk Browser
@@ -115,11 +174,11 @@ Terminal=false
 Categories=Network;WebBrowser;
 EOF
 
-# Also set up systemd user service as backup
-echo "Setting up systemd user service..."
-mkdir -p ~/.config/systemd/user
+        # Also set up systemd user service as backup
+        echo "Setting up systemd user service..."
+        mkdir -p ~/.config/systemd/user
 
-cat > ~/.config/systemd/user/kiosk-browser.service << EOF
+        cat > ~/.config/systemd/user/kiosk-browser.service << EOF
 [Unit]
 Description=Office Kiosk Browser
 After=graphical-session.target
@@ -138,13 +197,63 @@ RestartSec=10
 WantedBy=default.target
 EOF
 
-# Enable systemd user service
-systemctl --user daemon-reload
-systemctl --user enable kiosk-browser.service
+        # Enable systemd user service
+        systemctl --user daemon-reload
+        systemctl --user enable kiosk-browser.service
 
-echo "Autostart configured with two methods:"
-echo "1. Desktop autostart file (preferred for most desktop environments)"
-echo "2. Systemd user service (fallback and more reliable)"
+        echo "✓ Dual autostart configured (XDG + systemd)"
+        ;;
+        
+    *)
+        echo "Invalid option, using default (dual autostart)..."
+        # Set up dual autostart (XDG + systemd)
+        mkdir -p ~/.config/autostart
+
+        cat > ~/.config/autostart/kiosk-browser.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=Office Kiosk Browser
+Comment=Touchscreen-friendly browser for Raspberry Pi kiosk
+Exec=${PWD}/start_kiosk.sh
+Path=${PWD}
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+StartupNotify=false
+Terminal=false
+Categories=Network;WebBrowser;
+EOF
+
+        # Also set up systemd user service as backup
+        echo "Setting up systemd user service..."
+        mkdir -p ~/.config/systemd/user
+
+        cat > ~/.config/systemd/user/kiosk-browser.service << EOF
+[Unit]
+Description=Office Kiosk Browser
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:0
+Environment=XDG_RUNTIME_DIR=/run/user/$UID
+WorkingDirectory=${PWD}
+ExecStart=${PWD}/start_kiosk.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
+EOF
+
+        # Enable systemd user service
+        systemctl --user daemon-reload
+        systemctl --user enable kiosk-browser.service
+
+        echo "✓ Dual autostart configured (XDG + systemd)"
+        ;;
+esac
 
 # Disable screen blanking and screensaver
 echo "Configuring display settings..."

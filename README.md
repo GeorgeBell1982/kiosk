@@ -208,46 +208,63 @@ If the application doesn't start automatically after reboot:
 
 ### Manual Autostart Setup
 
-If the automated installer doesn't work, you can set up autostart manually:
+If the automated installer doesn't work, you can set up autostart manually using one of these methods:
 
-1. **Desktop Entry Method**:
-   ```bash
-   mkdir -p ~/.config/autostart
-   cat > ~/.config/autostart/kiosk-browser.desktop << EOF
-   [Desktop Entry]
-   Type=Application
-   Name=Office Kiosk Browser
-   Exec=/path/to/office_kiosk/start_kiosk.sh
-   Path=/path/to/office_kiosk
-   Hidden=false
-   NoDisplay=false
-   X-GNOME-Autostart-enabled=true
-   EOF
-   ```
+#### Method 1: Desktop Entry (Modern Pi OS)
+```bash
+mkdir -p ~/.config/autostart
+cat > ~/.config/autostart/kiosk-browser.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=Office Kiosk Browser
+Exec=/path/to/office_kiosk/start_kiosk.sh
+Path=/path/to/office_kiosk
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Terminal=false
+EOF
+```
 
-2. **Systemd User Service Method** (More Reliable):
-   ```bash
-   mkdir -p ~/.config/systemd/user
-   cat > ~/.config/systemd/user/kiosk-browser.service << EOF
-   [Unit]
-   Description=Office Kiosk Browser
-   After=graphical-session.target
-   
-   [Service]
-   Type=simple
-   Environment=DISPLAY=:0
-   WorkingDirectory=/path/to/office_kiosk
-   ExecStart=/path/to/office_kiosk/start_kiosk.sh
-   Restart=always
-   RestartSec=10
-   
-   [Install]
-   WantedBy=default.target
-   EOF
-   
-   systemctl --user daemon-reload
-   systemctl --user enable kiosk-browser.service
-   ```
+#### Method 2: Legacy LXDE Autostart (Older Pi OS)
+```bash
+# Create LXDE autostart directory
+mkdir -p ~/.config/lxsession/LXDE-pi
+
+# Create or edit autostart file
+cat > ~/.config/lxsession/LXDE-pi/autostart << EOF
+@lxpanel --profile LXDE-pi
+@pcmanfm --desktop --profile LXDE-pi
+@xscreensaver -no-splash
+@sh -c 'sleep 10 && cd /path/to/office_kiosk && /path/to/office_kiosk/start_kiosk.sh'
+EOF
+```
+
+#### Method 3: Systemd User Service
+```bash
+mkdir -p ~/.config/systemd/user
+cat > ~/.config/systemd/user/kiosk-browser.service << EOF
+[Unit]
+Description=Office Kiosk Browser
+After=graphical-session.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:0
+WorkingDirectory=/path/to/office_kiosk
+ExecStart=/path/to/office_kiosk/start_kiosk.sh
+Restart=always
+
+[Install]
+WantedBy=default.target
+EOF
+
+# Enable the service
+systemctl --user daemon-reload
+systemctl --user enable kiosk-browser.service
+```
+
+**Note**: Replace `/path/to/office_kiosk` with the actual path to your installation directory.
 
 **Note:** The startup script automatically detects Raspberry Pi hardware and enables fullscreen mode without requiring the `--fullscreen` parameter. A shutdown button (⏻) is also automatically added to safely power down the Pi.
 
