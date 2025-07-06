@@ -10,10 +10,11 @@ import logging
 import subprocess
 import os
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
-                            QWidget, QPushButton, QFrame, QMessageBox)
+                            QWidget, QPushButton, QFrame, QMessageBox, QLabel)
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
 from PyQt5.QtCore import QUrl, Qt
 from PyQt5.QtGui import QFont
+from version import get_version_string, get_full_version_info
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,6 +22,11 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 class KioskBrowser(QMainWindow):
     def __init__(self):
         super().__init__()
+        
+        # Log version information
+        version_info = get_full_version_info()
+        logging.info(f"Starting Office Kiosk Browser {version_info['formatted']}")
+        
         self.web_view = None  # Initialize early
         self.is_raspberry_pi = self.detect_raspberry_pi()
         self.setup_ui()
@@ -106,6 +112,22 @@ class KioskBrowser(QMainWindow):
         control_layout.setContentsMargins(5, 5, 5, 5)  # Increased margins
         control_layout.setSpacing(60)  # Increased space between groups
         control_frame.setLayout(control_layout)
+        
+        # Add version label as a small overlay in the top-left corner
+        version_info = get_full_version_info()
+        version_label = QLabel(version_info['formatted'], control_frame)
+        version_label.setStyleSheet("""
+            QLabel {
+                color: #bdc3c7;
+                font-size: 10px;
+                font-weight: normal;
+                background-color: rgba(0, 0, 0, 0.3);
+                padding: 2px 6px;
+                border-radius: 3px;
+            }
+        """)
+        version_label.move(10, 5)  # Position in top-left corner
+        version_label.adjustSize()  # Resize to fit content
         
         # Left side - Navigation controls group
         nav_controls_group = QFrame()

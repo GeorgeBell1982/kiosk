@@ -5,6 +5,13 @@
 echo "Starting Office Kiosk Browser..."
 echo
 
+# Display version information
+if [ -f "version.py" ]; then
+    VERSION=$(python3 -c "import version; print(f'v{version.__version__} ({version.__build_date__})')" 2>/dev/null || echo "Unknown")
+    echo "Version: $VERSION"
+    echo
+fi
+
 # Change to the script directory
 cd "$(dirname "$0")"
 

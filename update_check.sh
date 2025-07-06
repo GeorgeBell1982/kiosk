@@ -63,6 +63,33 @@ check_for_updates() {
     fi
 }
 
+# Function to update version number
+update_version() {
+    cd "$SCRIPT_DIR"
+    
+    if [ -f "version.py" ]; then
+        # Get current version
+        CURRENT_VERSION=$(python3 -c "import version; print(version.__version__)" 2>/dev/null || echo "1.0.0")
+        
+        # Extract version components
+        IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+        
+        # Increment patch version
+        patch=$((patch + 1))
+        NEW_VERSION="$major.$minor.$patch"
+        
+        # Update version file
+        sed -i "s/__version__ = \".*\"/__version__ = \"$NEW_VERSION\"/" version.py
+        sed -i "s/__build_date__ = \".*\"/__build_date__ = \"$(date +%Y-%m-%d)\"/" version.py
+        
+        log_message "Version updated from $CURRENT_VERSION to $NEW_VERSION"
+        return 0
+    else
+        log_message "Version file not found, skipping version update"
+        return 1
+    fi
+}
+
 # Function to apply updates
 apply_updates() {
     cd "$SCRIPT_DIR"
@@ -78,6 +105,9 @@ apply_updates() {
     # Pull updates
     if git pull origin main; then
         log_message "Updates applied successfully"
+        
+        # Update version number
+        update_version
         
         # Make scripts executable
         chmod +x start_kiosk.sh
