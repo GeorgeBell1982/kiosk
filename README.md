@@ -1,15 +1,24 @@
 # Office Kiosk Browser
 
-A touchscreen-friendly browser application designed for Raspberry Pi kiosks with quick access shortcuts to Home Assistant, YouTube Music,```python
-shortcuts = [
-    ("🏠 HA", "http://homeassistant.local:8123", "#e74c3c"),
-    ("🎵 YT Music", "https://music.youtube.com", "#e67e22"),
-    ("🔍 Google", "https://www.google.com", "#27ae60"),
-    ("📺 YouTube", "https://www.youtube.com", "#c0392b"),
-    # Add your custom shortcuts here
-    ("📊 Grafana", "http://your-grafana:3000", "#ff6b6b"),
-]
-```nd other services. Features a modern, responsive design with robust error handling and debugging capabilities.
+A touchscreen-friendly browser application designed for Raspberry Pi kiosks with quick access shortcuts to Home Assistant, YouTube Music, and other services. Features a modern, responsive design with robust error handling and debugging capabilities.
+
+## 🚨 Quick Fix: "No module named PyQt5" Error
+
+If you get this error when trying to start the kiosk, run these commands on your Raspberry Pi:
+
+```bash
+# Install PyQt5 system packages
+sudo apt update
+sudo apt install python3-pyqt5 python3-pyqt5.qtwebengine
+
+# Test if it works
+python3 -c "import PyQt5.QtWidgets; print('PyQt5 OK')"
+
+# Run the debugging script for more help
+cd /home/pi/office_kiosk
+chmod +x debug_startup.sh
+./debug_startup.sh
+```
 
 ## Features
 
@@ -338,6 +347,90 @@ shortcuts = [
 ```
 
 Format: `(Display Name, URL, Hex Color)`
+
+## Quick Start Debugging
+
+If you're having issues getting the kiosk to start, use these diagnostic tools:
+
+### 1. Run the Debugging Script
+```bash
+cd /home/pi/office_kiosk
+chmod +x debug_startup.sh
+./debug_startup.sh
+```
+
+This comprehensive script will check:
+- PyQt5 installation and imports
+- Project files and permissions
+- Display environment (X11)
+- System logs and errors
+- Provides specific fixes for common issues
+
+### 2. Setup Auto-Updates
+```bash
+cd /home/pi/office_kiosk
+chmod +x setup_auto_update.sh
+./setup_auto_update.sh
+```
+
+Choose option 1 to enable automatic updates every 30 minutes from GitHub.
+
+## Common Installation Issues
+
+### "No module named PyQt5" Error
+
+This is the most common issue. Here are the solutions:
+
+**For Raspberry Pi OS (Recommended):**
+```bash
+# Install system packages (preferred method)
+sudo apt update
+sudo apt install python3-pyqt5 python3-pyqt5.qtwebengine python3-pyqt5.qtwebkit
+
+# If QtWebEngine isn't available, try QtWebKit
+sudo apt install python3-pyqt5 python3-pyqt5.qtwebkit
+```
+
+**For other Linux distributions:**
+```bash
+# Ubuntu/Debian
+sudo apt install python3-pyqt5 python3-pyqt5.qtwebengine python3-pyqt5-dev
+
+# CentOS/RHEL/Fedora
+sudo dnf install python3-qt5 python3-qt5-webkit
+```
+
+**Using pip (fallback method):**
+```bash
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install PyQt5
+pip install PyQt5 PyQtWebEngine
+
+# If PyQtWebEngine fails, try:
+pip install PyQt5 PyQtWebKit
+```
+
+**Test PyQt5 Installation:**
+```bash
+python3 -c "import PyQt5.QtWidgets; print('PyQt5 installation: SUCCESS')"
+```
+
+### Auto-Installation Script
+
+The project includes an automatic installer for Raspberry Pi:
+```bash
+chmod +x install_rpi.sh
+./install_rpi.sh
+```
+
+This script will automatically:
+- Install required system packages
+- Set up Python dependencies with fallback options
+- Configure autostart
+- Handle PyQt5 installation issues
 
 ## Advanced Features
 
