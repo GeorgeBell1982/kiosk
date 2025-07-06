@@ -11,7 +11,22 @@ import subprocess
 import os
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                             QWidget, QPushButton, QFrame, QMessageBox, QLabel)
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
+
+# Try to import WebEngine, fall back to WebKit if not available
+try:
+    from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
+    WEBENGINE_AVAILABLE = True
+    logging.info("Using QtWebEngine for web rendering")
+except ImportError:
+    try:
+        from PyQt5.QtWebKitWidgets import QWebView as QWebEngineView
+        from PyQt5.QtWebKit import QWebSettings as QWebEngineSettings
+        WEBENGINE_AVAILABLE = False
+        logging.warning("QtWebEngine not available, falling back to QtWebKit")
+    except ImportError:
+        logging.error("Neither QtWebEngine nor QtWebKit available")
+        raise ImportError("No web rendering engine available")
+
 from PyQt5.QtCore import QUrl, Qt
 from PyQt5.QtGui import QFont
 from version import get_version_string, get_full_version_info
@@ -56,7 +71,10 @@ class KioskBrowser(QMainWindow):
         central_widget.setLayout(main_layout)
         
         # Create web view first
-        self.web_view = QWebEngineView()
+        if WEBENGINE_AVAILABLE:
+            self.web_view = QWebEngineView()
+        else:
+            self.web_view = QWebEngineView()  # This is actually QWebView when using WebKit
         
         # Create control panel
         self.create_control_panel(main_layout)
@@ -327,36 +345,37 @@ class KioskBrowser(QMainWindow):
         """Configure the web view settings"""
         settings = self.web_view.settings()
         
-        # Enable various web features
-        settings.setAttribute(QWebEngineSettings.PluginsEnabled, True)
-        settings.setAttribute(QWebEngineSettings.JavascriptEnabled, True)
-        settings.setAttribute(QWebEngineSettings.LocalStorageEnabled, True)
-        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
-        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
+        if WEBENGINE_AVAILABLE:
+            # WebEngine settings
+            settings.setAttribute(QWebEngineSettings.PluginsEnabled, True)
+            settings.setAttribute(QWebEngineSettings.JavascriptEnabled, True)
+            settings.setAttribute(QWebEngineSettings.LocalStorageEnabled, True)
+            settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+            settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
+            settings.setAttribute(QWebEngineSettings.ErrorPageEnabled, True)
+            settings.setAttribute(QWebEngineSettings.ShowScrollBars, True)
+            settings.setAttribute(QWebEngineSettings.AllowRunningInsecureContent, True)
+            logging.info("Configured QtWebEngine settings")
+        else:
+            # WebKit settings (different attribute names)
+            try:
+                settings.setAttribute(settings.PluginsEnabled, True)
+                settings.setAttribute(settings.JavascriptEnabled, True)
+                settings.setAttribute(settings.LocalStorageEnabled, True)
+                logging.info("Configured QtWebKit settings")
+            except AttributeError as e:
+                logging.warning(f"Some WebKit settings not available: {e}")
         
         # Connect URL change signal
         self.web_view.urlChanged.connect(self.on_url_changed)
         
         # Connect loading signals
-        self.web_view.loadStarted.connect(self.on_load_started)
-        self.web_view.loadFinished.connect(self.on_load_finished)
-        self.web_view.loadProgress.connect(self.on_load_progress)
-        
-        # Enable debugging for web engine
-        settings.setAttribute(QWebEngineSettings.ErrorPageEnabled, True)
-        settings.setAttribute(QWebEngineSettings.ShowScrollBars, True)  # Enable scrollbars for content navigation
-        
-        # Enable local content access for better local network support
-        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
-        settings.setAttribute(QWebEngineSettings.AllowRunningInsecureContent, True)
-        
-        # Connect certificate error handling - use the page's profile
-        page = self.web_view.page()
-        if hasattr(page, 'profile'):
-            profile = page.profile()
-            if hasattr(profile, 'requestIntercepted'):
-                # Alternative approach: handle through request interception
-                logging.info("Using request interception for SSL handling")
+        if hasattr(self.web_view, 'loadStarted'):
+            self.web_view.loadStarted.connect(self.on_load_started)
+        if hasattr(self.web_view, 'loadFinished'):
+            self.web_view.loadFinished.connect(self.on_load_finished)
+        if hasattr(self.web_view, 'loadProgress'):
+            self.web_view.loadProgress.connect(self.on_load_progress)
         
         logging.info("Web view setup complete")
         

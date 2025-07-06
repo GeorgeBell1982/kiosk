@@ -23,8 +23,23 @@ sudo apt update && sudo apt upgrade -y
 # Install required system packages
 echo "Installing system dependencies..."
 sudo apt install -y python3 python3-pip python3-venv
-sudo apt install -y python3-pyqt5 python3-pyqt5.qtwebengine
+sudo apt install -y python3-pyqt5 
 sudo apt install -y x11-xserver-utils unclutter
+
+# Try to install WebEngine - package name varies by OS version
+echo "Installing PyQt5 WebEngine..."
+if sudo apt install -y python3-pyqt5.qtwebengine 2>/dev/null; then
+    echo "Installed python3-pyqt5.qtwebengine"
+elif sudo apt install -y python3-pyqt5-qtwebengine 2>/dev/null; then
+    echo "Installed python3-pyqt5-qtwebengine (alternative name)"
+elif sudo apt install -y python3-pyqt5.qtwebkit 2>/dev/null; then
+    echo "Installed python3-pyqt5.qtwebkit (fallback for older systems)"
+    echo "Warning: Using QtWebKit instead of QtWebEngine"
+else
+    echo "Warning: Could not install PyQt5 WebEngine via apt"
+    echo "Will try to install via pip in virtual environment"
+    WEBENGINE_FALLBACK=true
+fi
 
 # Create virtual environment if it doesn't exist
 if [ ! -d ".venv" ]; then
@@ -46,12 +61,31 @@ else
     }
 fi
 
+# If WebEngine system package failed, try pip installation
+if [ "$WEBENGINE_FALLBACK" = "true" ]; then
+    echo "Attempting to install PyQtWebEngine via pip..."
+    .venv/bin/pip install PyQtWebEngine || {
+        echo "Failed to install PyQtWebEngine via pip"
+        echo "The application may not work properly without WebEngine"
+    }
+fi
+
 # Verify PyQt5 is available
 echo "Verifying PyQt5 installation..."
-.venv/bin/python -c "import PyQt5; import PyQt5.QtWebEngineWidgets; print('PyQt5 and WebEngine are available')" || {
-    echo "Error: PyQt5 or WebEngine not found. Please ensure system packages are installed:"
-    echo "sudo apt install python3-pyqt5 python3-pyqt5.qtwebengine"
+.venv/bin/python -c "import PyQt5; print('PyQt5 is available')" || {
+    echo "Error: PyQt5 not found. Please ensure system packages are installed:"
+    echo "sudo apt install python3-pyqt5"
     exit 1
+}
+
+# Try to verify WebEngine (but don't fail if not available)
+echo "Verifying WebEngine installation..."
+.venv/bin/python -c "import PyQt5.QtWebEngineWidgets; print('QtWebEngine is available')" || {
+    echo "Warning: QtWebEngine not available. Trying QtWebKit as fallback..."
+    .venv/bin/python -c "import PyQt5.QtWebKit; print('QtWebKit is available as fallback')" || {
+        echo "Warning: Neither QtWebEngine nor QtWebKit is available"
+        echo "The browser functionality may be limited"
+    }
 }
 
 # Make scripts executable

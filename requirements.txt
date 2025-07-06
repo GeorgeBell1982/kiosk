@@ -1,8 +1,9 @@
 # Office Kiosk Browser Dependencies
 # Note: On Raspberry Pi, PyQt5 should be installed via system packages (python3-pyqt5)
-# These are fallback requirements for other systems
+# These are fallback requirements for other systems or when system packages aren't available
 
 # For Raspberry Pi, use: sudo apt install python3-pyqt5 python3-pyqt5.qtwebengine
+# If WebEngine is not available, the app will fall back to WebKit or pip installation
 # For other systems, pip will install these versions
 PyQt5>=5.15.0
 PyQtWebEngine>=5.15.0
