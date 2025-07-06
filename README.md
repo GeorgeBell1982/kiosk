@@ -149,25 +149,104 @@ The application includes special handling for Home Assistant connections:
 
 For a dedicated kiosk setup on Raspberry Pi:
 
-1. Install the application as described above
-2. The application automatically detects Raspberry Pi hardware and starts in fullscreen mode
-3. Create a desktop entry:
+1. **Run the automated installer**:
    ```bash
-   mkdir -p ~/.local/share/applications
-   cat > ~/.local/share/applications/kiosk-browser.desktop << EOF
+   ./install_rpi.sh
+   ```
+   This will automatically set up autostart and all required dependencies.
+
+2. **Ensure Pi boots to desktop** (Very Important!):
+   ```bash
+   sudo raspi-config
+   # Navigate to: Boot Options -> Desktop/CLI -> Desktop Autologin
+   ```
+
+3. **Reboot to test autostart**:
+   ```bash
+   sudo reboot
+   ```
+
+### Autostart Troubleshooting
+
+If the application doesn't start automatically after reboot:
+
+1. **Check boot configuration**:
+   - Ensure Raspberry Pi boots to desktop (not console)
+   - Use `sudo raspi-config` -> Boot Options -> Desktop/CLI -> Desktop Autologin
+
+2. **Run the troubleshooting script**:
+   ```bash
+   ./troubleshoot_autostart.sh
+   ```
+
+3. **Check autostart files**:
+   ```bash
+   # Check desktop autostart file
+   cat ~/.config/autostart/kiosk-browser.desktop
+   
+   # Check systemd service status
+   systemctl --user status kiosk-browser.service
+   ```
+
+4. **Manual testing**:
+   ```bash
+   # Test desktop file
+   gtk-launch kiosk-browser.desktop
+   
+   # Test systemd service
+   systemctl --user start kiosk-browser.service
+   ```
+
+5. **View logs**:
+   ```bash
+   # Check systemd service logs
+   journalctl --user -u kiosk-browser.service
+   
+   # Check application logs
+   tail -f /var/log/kiosk-update.log
+   ```
+
+### Manual Autostart Setup
+
+If the automated installer doesn't work, you can set up autostart manually:
+
+1. **Desktop Entry Method**:
+   ```bash
+   mkdir -p ~/.config/autostart
+   cat > ~/.config/autostart/kiosk-browser.desktop << EOF
    [Desktop Entry]
+   Type=Application
    Name=Office Kiosk Browser
    Exec=/path/to/office_kiosk/start_kiosk.sh
-   Type=Application
-   Icon=web-browser
-   Categories=Network;WebBrowser;
+   Path=/path/to/office_kiosk
+   Hidden=false
+   NoDisplay=false
+   X-GNOME-Autostart-enabled=true
    EOF
    ```
 
-4. For auto-start on boot, add to autostart:
+2. **Systemd User Service Method** (More Reliable):
    ```bash
-   mkdir -p ~/.config/autostart
-   cp ~/.local/share/applications/kiosk-browser.desktop ~/.config/autostart/
+   mkdir -p ~/.config/systemd/user
+   cat > ~/.config/systemd/user/kiosk-browser.service << EOF
+   [Unit]
+   Description=Office Kiosk Browser
+   After=graphical-session.target
+   
+   [Service]
+   Type=simple
+   Environment=DISPLAY=:0
+   WorkingDirectory=/path/to/office_kiosk
+   ExecStart=/path/to/office_kiosk/start_kiosk.sh
+   Restart=always
+   RestartSec=10
+   
+   [Install]
+   WantedBy=default.target
+   EOF
+   
+   systemctl --user daemon-reload
+   systemctl --user enable kiosk-browser.service
    ```
 
 **Note:** The startup script automatically detects Raspberry Pi hardware and enables fullscreen mode without requiring the `--fullscreen` parameter. A shutdown button (⏻) is also automatically added to safely power down the Pi.

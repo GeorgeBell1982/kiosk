@@ -104,11 +104,47 @@ cat > ~/.config/autostart/kiosk-browser.desktop << EOF
 [Desktop Entry]
 Type=Application
 Name=Office Kiosk Browser
-Exec=${PWD}/start_kiosk.sh --fullscreen
+Comment=Touchscreen-friendly browser for Raspberry Pi kiosk
+Exec=${PWD}/start_kiosk.sh
+Path=${PWD}
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
+StartupNotify=false
+Terminal=false
+Categories=Network;WebBrowser;
 EOF
+
+# Also set up systemd user service as backup
+echo "Setting up systemd user service..."
+mkdir -p ~/.config/systemd/user
+
+cat > ~/.config/systemd/user/kiosk-browser.service << EOF
+[Unit]
+Description=Office Kiosk Browser
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:0
+Environment=XDG_RUNTIME_DIR=/run/user/$UID
+WorkingDirectory=${PWD}
+ExecStart=${PWD}/start_kiosk.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
+EOF
+
+# Enable systemd user service
+systemctl --user daemon-reload
+systemctl --user enable kiosk-browser.service
+
+echo "Autostart configured with two methods:"
+echo "1. Desktop autostart file (preferred for most desktop environments)"
+echo "2. Systemd user service (fallback and more reliable)"
 
 # Disable screen blanking and screensaver
 echo "Configuring display settings..."
@@ -144,9 +180,17 @@ echo "Configuration notes:"
 echo "1. Edit shortcuts directly in kiosk_browser.py if needed"
 echo "2. Home Assistant URL can be changed in the shortcuts list"
 echo "3. Shutdown button is available for safe Pi shutdown"
-echo "4. Reboot to test automatic startup"
+echo "4. Autostart is configured - reboot to test"
 echo
 echo "Manual start: ./start_kiosk.sh"
 echo "Fullscreen:   ./start_kiosk.sh --fullscreen"
+echo
+echo "Autostart troubleshooting:"
+echo "- Run: ./troubleshoot_autostart.sh"
+echo "- Check logs: journalctl --user -u kiosk-browser.service"
+echo "- Manual test: gtk-launch kiosk-browser.desktop"
+echo
+echo "Important: Ensure Pi boots to desktop (not console)"
+echo "Use: sudo raspi-config -> Boot Options -> Desktop/CLI -> Desktop Autologin"
 echo
 echo "For autostart, the browser will launch automatically after reboot."
