@@ -211,13 +211,17 @@ case $choice in
     1)
         echo "Recreating XDG autostart file..."
         
+        # Get absolute paths
+        SCRIPT_DIR_ABS="$(cd "$(dirname "$0")" && pwd)"
+        START_SCRIPT_ABS="$SCRIPT_DIR_ABS/start_kiosk.sh"
+        
         cat > "$KIOSK_DESKTOP" << EOF
 [Desktop Entry]
 Type=Application
 Name=Office Kiosk Browser
 Comment=Touchscreen-friendly browser for Raspberry Pi kiosk
-Exec=$START_SCRIPT
-Path=$SCRIPT_DIR
+Exec=$START_SCRIPT_ABS
+Path=$SCRIPT_DIR_ABS
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
@@ -228,11 +232,17 @@ EOF
         
         echo "✓ XDG autostart file recreated"
         echo "  File: $KIOSK_DESKTOP"
+        echo "  Exec: $START_SCRIPT_ABS"
+        echo "  Path: $SCRIPT_DIR_ABS"
         echo "  Reboot to test autostart"
         ;;
     
     2)
         echo "Setting up legacy LXDE autostart..."
+        
+        # Get absolute paths
+        SCRIPT_DIR_ABS="$(cd "$(dirname "$0")" && pwd)"
+        START_SCRIPT_ABS="$SCRIPT_DIR_ABS/start_kiosk.sh"
         
         # Create LXDE autostart directory if it doesn't exist
         mkdir -p "$LXDE_AUTOSTART_DIR"
@@ -249,8 +259,9 @@ EOF
         
         # Add kiosk entry if not already present
         if ! grep -q "kiosk" "$LXDE_AUTOSTART_FILE" 2>/dev/null; then
-            echo "@sh -c 'sleep 10 && cd $SCRIPT_DIR && $START_SCRIPT'" >> "$LXDE_AUTOSTART_FILE"
+            echo "@sh -c 'sleep 10 && cd $SCRIPT_DIR_ABS && $START_SCRIPT_ABS'" >> "$LXDE_AUTOSTART_FILE"
             echo "✓ Added kiosk entry to LXDE autostart"
+            echo "  Command: cd $SCRIPT_DIR_ABS && $START_SCRIPT_ABS"
         else
             echo "⚠ Kiosk entry already exists in LXDE autostart"
         fi
