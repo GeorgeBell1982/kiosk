@@ -1,0 +1,3 @@
+# Office Kiosk Browser Dependencies
+PyQt5==5.15.10
+PyQtWebEngine==5.15.6

@@ -1,0 +1,17 @@
+[Unit]
+Description=Office Kiosk Browser
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+Environment=DISPLAY=:0
+WorkingDirectory=/home/pi/office_kiosk
+ExecStart=/home/pi/office_kiosk/.venv/bin/python /home/pi/office_kiosk/kiosk_browser.py --fullscreen
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
