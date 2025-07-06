@@ -60,7 +60,14 @@ class KioskBrowser(QMainWindow):
     def setup_ui(self):
         """Setup the user interface"""
         self.setWindowTitle("Office Kiosk Browser")
-        self.setGeometry(100, 100, 1024, 768)
+        
+        # Set default window size optimized for common Pi displays
+        if self.is_raspberry_pi:
+            # Default to 1024x600 for Waveshare and similar displays
+            self.setGeometry(0, 0, 1024, 600)
+        else:
+            # Default for desktop testing
+            self.setGeometry(100, 100, 1024, 768)
         
         # Set up the central widget
         central_widget = QWidget()

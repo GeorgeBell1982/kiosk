@@ -19,9 +19,10 @@ fi
 echo "Setup Options:"
 echo "1. Standard installation"
 echo "2. Fix graphics/display issues first (recommended for display problems)"
-echo "3. Exit"
+echo "3. Waveshare 1024x600 touchscreen setup"
+echo "4. Exit"
 echo
-read -p "Choose option (1-3): " -r choice
+read -p "Choose option (1-4): " -r choice
 
 case $choice in
     2)
@@ -33,6 +34,14 @@ case $choice in
         echo
         ;;
     3)
+        echo "Running Waveshare 1024x600 setup..."
+        chmod +x setup_waveshare.sh
+        ./setup_waveshare.sh
+        echo
+        echo "Waveshare setup completed. Continuing with installation..."
+        echo
+        ;;
+    4)
         echo "Installation cancelled."
         exit 0
         ;;

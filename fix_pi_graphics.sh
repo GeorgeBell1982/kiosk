@@ -100,9 +100,16 @@ echo "=== 5. SETTING UP DISPLAY CONFIGURATION ==="
 
 # Check boot config for proper display settings
 echo "Checking display configuration..."
+echo "Detected setup: Waveshare 1024x600 touchscreen"
 
-# Ensure proper video settings in config.txt
+# Ensure proper video settings in config.txt for Waveshare 1024x600
 BOOT_CONFIG="/boot/config.txt"
+
+# Remove any existing HDMI mode settings that might conflict
+sudo sed -i '/^hdmi_mode=/d' "$BOOT_CONFIG" 2>/dev/null || true
+sudo sed -i '/^hdmi_group=/d' "$BOOT_CONFIG" 2>/dev/null || true
+
+# Add Waveshare 1024x600 specific settings
 if ! grep -q "hdmi_force_hotplug=1" "$BOOT_CONFIG"; then
     echo "hdmi_force_hotplug=1" | sudo tee -a "$BOOT_CONFIG"
     echo "✅ Added HDMI hotplug setting"
@@ -111,15 +118,39 @@ fi
 
 if ! grep -q "hdmi_group=2" "$BOOT_CONFIG"; then
     echo "hdmi_group=2" | sudo tee -a "$BOOT_CONFIG"
-    echo "✅ Added HDMI group setting"
+    echo "✅ Added HDMI group setting (DMT)"
     REBOOT_NEEDED=true
 fi
 
-if ! grep -q "hdmi_mode=82" "$BOOT_CONFIG"; then
-    echo "hdmi_mode=82" | sudo tee -a "$BOOT_CONFIG"
-    echo "✅ Added HDMI mode setting (1920x1080@60Hz)"
+# HDMI mode for 1024x600 @ 60Hz
+if ! grep -q "hdmi_mode=87" "$BOOT_CONFIG"; then
+    echo "hdmi_mode=87" | sudo tee -a "$BOOT_CONFIG"
+    echo "✅ Added HDMI mode setting (1024x600@60Hz)"
     REBOOT_NEEDED=true
 fi
+
+# Custom CVT mode for 1024x600
+if ! grep -q "hdmi_cvt 1024 600 60 6 0 0 0" "$BOOT_CONFIG"; then
+    echo "hdmi_cvt 1024 600 60 6 0 0 0" | sudo tee -a "$BOOT_CONFIG"
+    echo "✅ Added custom CVT mode for 1024x600"
+    REBOOT_NEEDED=true
+fi
+
+# Disable overscan for exact pixel mapping
+if ! grep -q "disable_overscan=1" "$BOOT_CONFIG"; then
+    echo "disable_overscan=1" | sudo tee -a "$BOOT_CONFIG"
+    echo "✅ Disabled overscan for pixel-perfect display"
+    REBOOT_NEEDED=true
+fi
+
+# Optional: Add display rotation if needed (uncomment if your screen is rotated)
+# if ! grep -q "display_rotate=1" "$BOOT_CONFIG"; then
+#     echo "display_rotate=1" | sudo tee -a "$BOOT_CONFIG"
+#     echo "✅ Added display rotation (90 degrees)"
+#     REBOOT_NEEDED=true
+# fi
+
+echo "✅ Waveshare 1024x600 display configuration completed"
 
 echo
 echo "=== 6. TESTING GRAPHICS ==="
