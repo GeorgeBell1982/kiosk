@@ -34,10 +34,19 @@ fi
 # Check if virtual environment exists
 if [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
-    python3 -m venv .venv
-    
-    echo "Installing dependencies..."
-    .venv/bin/pip install -r requirements.txt
+    if grep -q "Raspberry Pi" /proc/cpuinfo 2>/dev/null; then
+        # On Raspberry Pi, create with system site packages for PyQt5
+        python3 -m venv --system-site-packages .venv
+        echo "Installing dependencies (using system PyQt5)..."
+        if [ -f "requirements-rpi.txt" ]; then
+            .venv/bin/pip install -r requirements-rpi.txt
+        fi
+    else
+        # On other systems, use standard venv and requirements
+        python3 -m venv .venv
+        echo "Installing dependencies..."
+        .venv/bin/pip install -r requirements.txt
+    fi
 fi
 
 # Check if running on Raspberry Pi and automatically add fullscreen

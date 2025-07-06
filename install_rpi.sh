@@ -28,13 +28,31 @@ sudo apt install -y x11-xserver-utils unclutter
 
 # Create virtual environment if it doesn't exist
 if [ ! -d ".venv" ]; then
-    echo "Creating Python virtual environment..."
-    python3 -m venv .venv
+    echo "Creating Python virtual environment with system packages..."
+    # Create venv with access to system site packages for PyQt5
+    python3 -m venv --system-site-packages .venv
 fi
 
-# Install Python dependencies
+# Install Python dependencies (will skip PyQt5 if already available via system packages)
 echo "Installing Python dependencies..."
-.venv/bin/pip install -r requirements.txt
+# Use Raspberry Pi specific requirements that don't include PyQt5
+if [ -f "requirements-rpi.txt" ]; then
+    echo "Using Raspberry Pi specific requirements..."
+    .venv/bin/pip install -r requirements-rpi.txt
+else
+    echo "Fallback to standard requirements (may fail on PyQt5)..."
+    .venv/bin/pip install -r requirements.txt || {
+        echo "Some packages failed to install via pip, but that's OK if system packages are available"
+    }
+fi
+
+# Verify PyQt5 is available
+echo "Verifying PyQt5 installation..."
+.venv/bin/python -c "import PyQt5; import PyQt5.QtWebEngineWidgets; print('PyQt5 and WebEngine are available')" || {
+    echo "Error: PyQt5 or WebEngine not found. Please ensure system packages are installed:"
+    echo "sudo apt install python3-pyqt5 python3-pyqt5.qtwebengine"
+    exit 1
+}
 
 # Make scripts executable
 chmod +x start_kiosk.sh
