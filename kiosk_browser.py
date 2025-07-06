@@ -126,7 +126,7 @@ class KioskBrowser(QMainWindow):
                 border-radius: 3px;
             }
         """)
-        version_label.move(10, 5)  # Position in top-left corner
+        version_label.move(25, 0)  # Position with more spacing from edge and move up 5 more pixels
         version_label.adjustSize()  # Resize to fit content
         
         # Left side - Navigation controls group
