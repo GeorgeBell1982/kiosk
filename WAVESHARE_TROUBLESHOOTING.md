@@ -176,10 +176,52 @@ sudo ./setup_waveshare.sh
 sudo reboot
 ```
 
-## Getting Help
+## Restoring config.txt Backup
 
-1. **Run diagnostics**: `./debug_startup.sh`
-2. **Check hardware**: Verify power supply (5V 3A minimum)
-3. **Test cables**: Ensure HDMI and USB connections are secure
-4. **Update firmware**: `sudo rpi-update`
-5. **Check logs**: `dmesg | grep -i touch`
+If you need to restore the original `/boot/config.txt` before the Waveshare modifications:
+
+### Option 1: Using the Restore Script (Recommended)
+```bash
+cd /path/to/office_kiosk
+chmod +x restore_config_backup.sh
+sudo ./restore_config_backup.sh
+```
+
+The script will:
+- List all available backup files
+- Let you choose which backup to restore
+- Create a safety backup before restoring
+- Guide you through the process
+
+### Option 2: Manual Restoration
+1. **Find available backups:**
+   ```bash
+   ls -la /boot/config.txt.backup.*
+   ```
+
+2. **Choose the backup you want (usually the most recent):**
+   ```bash
+   ls -la /boot/config.txt.backup.* | tail -1
+   ```
+
+3. **Create a backup of current config (safety measure):**
+   ```bash
+   sudo cp /boot/config.txt /boot/config.txt.pre-restore.$(date +%Y%m%d-%H%M%S)
+   ```
+
+4. **Restore the backup:**
+   ```bash
+   # Replace the timestamp with your actual backup file
+   sudo cp /boot/config.txt.backup.YYYYMMDD-HHMMSS /boot/config.txt
+   ```
+
+5. **Reboot to apply changes:**
+   ```bash
+   sudo reboot
+   ```
+
+### After Restoration
+- Your display may revert to default resolution/settings
+- Touch functionality should return to original state
+- If you want to re-apply Waveshare settings later, run `./setup_waveshare.sh` again
+````
