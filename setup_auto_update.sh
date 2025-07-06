@@ -7,7 +7,8 @@ echo
 
 SCRIPT_DIR="$(dirname "$0")"
 UPDATE_SCRIPT="$SCRIPT_DIR/update_check.sh"
-CRON_ENTRY="*/30 * * * * $UPDATE_SCRIPT >/dev/null 2>&1"
+# Use absolute path for cron job to ensure it works regardless of current directory
+CRON_ENTRY="*/30 * * * * cd $SCRIPT_DIR && $UPDATE_SCRIPT >/dev/null 2>&1"
 
 # Check if update script exists
 if [ ! -f "$UPDATE_SCRIPT" ]; then

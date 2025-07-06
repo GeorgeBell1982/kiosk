@@ -4,8 +4,11 @@
 
 REPO_URL="https://github.com/GeorgeBell1982/kiosk.git"
 UPDATE_LOG="/var/log/kiosk-update.log"
-SCRIPT_DIR="$(dirname "$0")"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/update_config.conf"
+
+# Change to script directory to ensure we're in the right place
+cd "$SCRIPT_DIR"
 
 # Default configuration
 AUTO_UPDATE_CHECK=true
