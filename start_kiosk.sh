@@ -20,6 +20,38 @@ SCRIPT_DIR="$(pwd)"
 export DISPLAY=${DISPLAY:-:0}
 export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 
+# Raspberry Pi specific display and GPU settings
+if grep -q "Raspberry Pi" /proc/cpuinfo 2>/dev/null; then
+    echo "Configuring Raspberry Pi display settings..."
+    
+    # Set GPU memory split if not already configured
+    GPU_MEMORY=$(vcgencmd get_mem gpu | cut -d= -f2 | cut -d M -f1)
+    if [ "$GPU_MEMORY" -lt 64 ]; then
+        echo "⚠ GPU memory is only ${GPU_MEMORY}MB. Recommend at least 64MB for better graphics."
+        echo "  To fix: Add 'gpu_mem=64' to /boot/config.txt and reboot"
+    fi
+    
+    # Disable Qt warnings and set better rendering
+    export QT_LOGGING_RULES="*.debug=false;qt.qpa.screen=false"
+    export QT_AUTO_SCREEN_SCALE_FACTOR=1
+    export QT_SCALE_FACTOR=1
+    export QT_SCREEN_SCALE_FACTORS=""
+    
+    # Force hardware acceleration and disable problematic features
+    export QTWEBENGINE_CHROMIUM_FLAGS="--disable-gpu-sandbox --disable-software-rasterizer --enable-gpu-rasterization --ignore-gpu-blacklist --disable-dev-shm-usage"
+    
+    # Disable EGL warnings
+    export EGL_LOG_LEVEL=fatal
+    export MESA_GL_VERSION_OVERRIDE=3.0
+    
+    # Ensure display is available
+    if [ -z "$DISPLAY" ] || ! xset q &>/dev/null; then
+        echo "⚠ Display not available or X11 not running"
+        echo "  Make sure you're running in desktop mode, not SSH"
+        echo "  Use: sudo raspi-config -> Boot Options -> Desktop Autologin"
+    fi
+fi
+
 # Check for updates on Raspberry Pi
 if grep -q "Raspberry Pi" /proc/cpuinfo 2>/dev/null; then
     echo "Checking for updates..."

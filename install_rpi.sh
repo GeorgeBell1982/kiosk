@@ -16,6 +16,31 @@ if ! grep -q "Raspberry Pi" /proc/cpuinfo 2>/dev/null; then
     fi
 fi
 
+echo "Setup Options:"
+echo "1. Standard installation"
+echo "2. Fix graphics/display issues first (recommended for display problems)"
+echo "3. Exit"
+echo
+read -p "Choose option (1-3): " -r choice
+
+case $choice in
+    2)
+        echo "Running graphics fix script..."
+        chmod +x fix_pi_graphics.sh
+        ./fix_pi_graphics.sh
+        echo
+        echo "Graphics fix completed. Continuing with installation..."
+        echo
+        ;;
+    3)
+        echo "Installation cancelled."
+        exit 0
+        ;;
+    1|*)
+        echo "Proceeding with standard installation..."
+        ;;
+esac
+
 # Update system
 echo "Updating system packages..."
 sudo apt update && sudo apt upgrade -y

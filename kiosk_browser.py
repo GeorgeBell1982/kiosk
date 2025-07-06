@@ -346,7 +346,7 @@ class KioskBrowser(QMainWindow):
         settings = self.web_view.settings()
         
         if WEBENGINE_AVAILABLE:
-            # WebEngine settings
+            # WebEngine settings for better compatibility
             settings.setAttribute(QWebEngineSettings.PluginsEnabled, True)
             settings.setAttribute(QWebEngineSettings.JavascriptEnabled, True)
             settings.setAttribute(QWebEngineSettings.LocalStorageEnabled, True)
@@ -355,6 +355,15 @@ class KioskBrowser(QMainWindow):
             settings.setAttribute(QWebEngineSettings.ErrorPageEnabled, True)
             settings.setAttribute(QWebEngineSettings.ShowScrollBars, True)
             settings.setAttribute(QWebEngineSettings.AllowRunningInsecureContent, True)
+            
+            # Additional settings for Raspberry Pi
+            if self.is_raspberry_pi:
+                settings.setAttribute(QWebEngineSettings.Accelerated2dCanvasEnabled, False)
+                settings.setAttribute(QWebEngineSettings.WebGLEnabled, False)
+                settings.setAttribute(QWebEngineSettings.HyperlinkAuditingEnabled, False)
+                settings.setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
+                logging.info("Applied Raspberry Pi specific QtWebEngine settings")
+            
             logging.info("Configured QtWebEngine settings")
         else:
             # WebKit settings (different attribute names)
@@ -362,7 +371,10 @@ class KioskBrowser(QMainWindow):
                 settings.setAttribute(settings.PluginsEnabled, True)
                 settings.setAttribute(settings.JavascriptEnabled, True)
                 settings.setAttribute(settings.LocalStorageEnabled, True)
-                logging.info("Configured QtWebKit settings")
+                settings.setAttribute(settings.AcceleratedCompositingEnabled, False)  # Disable for Pi
+                if hasattr(settings, 'WebGLEnabled'):
+                    settings.setAttribute(settings.WebGLEnabled, False)
+                logging.info("Configured QtWebKit settings with Pi optimizations")
             except AttributeError as e:
                 logging.warning(f"Some WebKit settings not available: {e}")
         
@@ -690,6 +702,19 @@ Debug Information:
 
 def main():
     """Main function to run the application"""
+    # Set Qt application attributes before creating QApplication
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+    QApplication.setAttribute(Qt.AA_DisableWindowContextHelpButton, True)
+    
+    # For Raspberry Pi, add specific attributes
+    is_rpi = 'raspberry' in os.uname().machine.lower() if hasattr(os, 'uname') else False
+    if is_rpi:
+        QApplication.setAttribute(Qt.AA_X11InitThreads, True)
+        # Disable GPU blacklist for better WebEngine support
+        os.environ.setdefault('QTWEBENGINE_CHROMIUM_FLAGS', 
+            '--disable-gpu-sandbox --disable-software-rasterizer --enable-gpu-rasterization --ignore-gpu-blacklist --disable-dev-shm-usage')
+    
     app = QApplication(sys.argv)
     
     # Set application properties
@@ -697,14 +722,36 @@ def main():
     app.setApplicationVersion("1.0")
     app.setOrganizationName("Office Kiosk")
     
+    # Improve font rendering
+    app.setDesktopSettingsAware(False)
+    
     # Create and show the main window
     browser = KioskBrowser()
     
     # Check if we should start in fullscreen (useful for Raspberry Pi)
-    if len(sys.argv) > 1 and sys.argv[1] == '--fullscreen':
+    should_fullscreen = False
+    if len(sys.argv) > 1 and '--fullscreen' in sys.argv:
+        should_fullscreen = True
+    elif is_rpi:
+        # Auto-fullscreen on Raspberry Pi
+        should_fullscreen = True
+        logging.info("Raspberry Pi detected - enabling fullscreen mode")
+    
+    if should_fullscreen:
+        # For better fullscreen on Pi, ensure proper display setup
+        if is_rpi:
+            # Get the primary screen and use its geometry
+            screen = app.primaryScreen()
+            if screen:
+                geometry = screen.availableGeometry()
+                browser.setGeometry(geometry)
+                logging.info(f"Set geometry to: {geometry.width()}x{geometry.height()}")
+        
         browser.showFullScreen()
+        logging.info("Started in fullscreen mode")
     else:
         browser.show()
+        logging.info("Started in windowed mode")
     
     # Start the application
     sys.exit(app.exec_())
