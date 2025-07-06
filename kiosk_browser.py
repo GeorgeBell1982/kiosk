@@ -61,13 +61,13 @@ class KioskBrowser(QMainWindow):
         """Setup the user interface"""
         self.setWindowTitle("Office Kiosk Browser")
         
-        # Set default window size optimized for common Pi displays
+        # Set window size optimized for 1024x600 displays (Waveshare touchscreen)
         if self.is_raspberry_pi:
-            # Default to 1024x600 for Waveshare and similar displays
+            # For Raspberry Pi with 1024x600 touchscreen - fit exactly
             self.setGeometry(0, 0, 1024, 600)
         else:
-            # Default for desktop testing
-            self.setGeometry(100, 100, 1024, 768)
+            # For development on Windows - use smaller size to match Pi resolution
+            self.setGeometry(100, 100, 1024, 600)
         
         # Set up the central widget
         central_widget = QWidget()
@@ -98,11 +98,11 @@ class KioskBrowser(QMainWindow):
                 background-color: #3498db;
                 border: none;
                 color: white;
-                padding: 15px;
-                font-size: 14px;
+                padding: 10px;
+                font-size: 12px;
                 font-weight: bold;
-                border-radius: 8px;
-                margin: 2px;
+                border-radius: 6px;
+                margin: 1px;
             }
             QPushButton:hover {
                 background-color: #2980b9;
@@ -123,7 +123,7 @@ class KioskBrowser(QMainWindow):
         # Use percentage of window height instead of fixed pixels
         window_height = self.height()
         window_width = self.width()
-        control_height = max(100, int(window_height * 0.15))  # 15% of window height, minimum 100px
+        control_height = max(80, int(window_height * 0.12))  # 12% of window height, minimum 80px for 1024x600
         control_frame.setFixedHeight(control_height)
         control_frame.setStyleSheet("""
             QFrame {
@@ -156,13 +156,12 @@ class KioskBrowser(QMainWindow):
         
         # Left side - Navigation controls group
         nav_controls_group = QFrame()
-        # Use percentage of window width instead of fixed pixels
-        # Make navigation wider on Raspberry Pi to accommodate shutdown button
+        # Navigation controls group height
         nav_width_percent = 0.5 if self.is_raspberry_pi else 0.4  # 50% vs 40% of window width
         nav_width = int(window_width * nav_width_percent)
-        nav_hight = int(window_height * 0.10)  # 10% of window hight
+        nav_height = int(window_height * 0.08)  # 8% of window height for better 1024x600 fit
         nav_controls_group.setFixedWidth(nav_width)
-        nav_controls_group.setFixedHeight(nav_hight)
+        nav_controls_group.setFixedHeight(nav_height)
         nav_controls_group.setStyleSheet("""
             QFrame {
                 background-color: rgba(44, 62, 80, 0.8);
@@ -177,8 +176,8 @@ class KioskBrowser(QMainWindow):
         nav_controls_layout.setContentsMargins(5, 5, 5, 5)  # Minimal margins for maximum button space
         nav_controls_group.setLayout(nav_controls_layout)
         
-        # Navigation buttons - consistent sizing with proportional fonts
-        font_size = max(16, int(control_height * 0.10))  # Font size based on control height
+        # Navigation buttons - consistent sizing with proportional fonts for 1024x600
+        font_size = max(12, int(control_height * 0.08))  # Smaller font size for compact buttons
         nav_button_style = f"""
             QPushButton {{
                 background-color: #3498db;
@@ -202,9 +201,9 @@ class KioskBrowser(QMainWindow):
         """
         
         # Create navigation buttons with proportional size
-        # Button size based on control frame dimensions
-        button_width = int(control_height * 0.6)  # 70% of control height
-        button_height = int(control_height * 0.45)  # 60% of control height
+        # Button size based on control frame dimensions - smaller for 1024x600
+        button_width = int(control_height * 0.5)  # 50% of control height for more compact buttons
+        button_height = int(control_height * 0.35)  # 35% of control height for more compact buttons
         button_size = (button_width, button_height)
         
         self.back_btn = QPushButton("←")
@@ -309,7 +308,7 @@ class KioskBrowser(QMainWindow):
             # Proportional sizing for shortcut buttons
             shortcut_width = int(window_width * 0.15)  # 15% of window width
             shortcut_height = button_height  # Same height as nav buttons
-            shortcut_font_size = max(12, int(control_height * 0.15))  # Smaller font for text buttons
+            shortcut_font_size = max(10, int(control_height * 0.12))  # Smaller font for compact text buttons
             btn.setFixedSize(shortcut_width, shortcut_height)
             btn.setStyleSheet(f"""
                 QPushButton {{
@@ -745,15 +744,6 @@ def main():
         logging.info("Raspberry Pi detected - enabling fullscreen mode")
     
     if should_fullscreen:
-        # For better fullscreen on Pi, ensure proper display setup
-        if is_rpi:
-            # Get the primary screen and use its geometry
-            screen = app.primaryScreen()
-            if screen:
-                geometry = screen.availableGeometry()
-                browser.setGeometry(geometry)
-                logging.info(f"Set geometry to: {geometry.width()}x{geometry.height()}")
-        
         browser.showFullScreen()
         logging.info("Started in fullscreen mode")
     else:
