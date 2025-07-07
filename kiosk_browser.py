@@ -27,8 +27,8 @@ except ImportError:
         logging.error("Neither QtWebEngine nor QtWebKit available")
         raise ImportError("No web rendering engine available")
 
-from PyQt5.QtCore import QUrl, Qt
-from PyQt5.QtGui import QFont
+from PyQt5.QtCore import QUrl, Qt, QSize
+from PyQt5.QtGui import QFont, QIcon
 from version import get_version_string, get_full_version_info
 
 # Set up logging
@@ -158,9 +158,8 @@ class KioskBrowser(QMainWindow):
         nav_controls_group = QFrame()
         # Navigation controls group height - taller for 2-row layout
         nav_width_percent = 0.5 if self.is_raspberry_pi else 0.4  # 50% vs 40% of window width
-        nav_width = int(window_width * nav_width_percent)
         nav_height = int(window_height * 0.16)  # 16% of window height for 2-row button layout
-        nav_controls_group.setFixedWidth(nav_width)
+        nav_controls_group.setFixedWidth(int(window_width * nav_width_percent))
         nav_controls_group.setFixedHeight(nav_height)
         nav_controls_group.setStyleSheet("""
             QFrame {
@@ -208,31 +207,45 @@ class KioskBrowser(QMainWindow):
         
         # Create navigation buttons with proportional size for 2-row layout
         # Button size based on available space in 2 rows
-        button_width = int((nav_width - 40) / 3)  # 3 buttons per row, account for margins
+        button_width = int((nav_controls_group.width() - 40) / 3)  # 3 buttons per row, account for margins
         button_height = int((nav_height - 20) / 2)  # 2 rows, account for margins and spacing
         button_size = (button_width, button_height)
         
-        self.back_btn = QPushButton("BACK")
+        self.back_btn = QPushButton()
+        self.back_btn.setIcon(self.load_icon('back'))
+        self.back_btn.setIconSize(QSize(int(button_width * 0.4), int(button_height * 0.4)))
         self.back_btn.clicked.connect(self.web_view.back)
         self.back_btn.setFixedSize(*button_size)
         self.back_btn.setStyleSheet(nav_button_style)
+        self.back_btn.setToolTip("Go Back")
         
-        self.forward_btn = QPushButton("FWD")
+        self.forward_btn = QPushButton()
+        self.forward_btn.setIcon(self.load_icon('forward'))
+        self.forward_btn.setIconSize(QSize(int(button_width * 0.4), int(button_height * 0.4)))
         self.forward_btn.clicked.connect(self.web_view.forward)
         self.forward_btn.setFixedSize(*button_size)
         self.forward_btn.setStyleSheet(nav_button_style)
+        self.forward_btn.setToolTip("Go Forward")
         
-        self.refresh_btn = QPushButton("REFRESH")
+        self.refresh_btn = QPushButton()
+        self.refresh_btn.setIcon(self.load_icon('refresh'))
+        self.refresh_btn.setIconSize(QSize(int(button_width * 0.4), int(button_height * 0.4)))
         self.refresh_btn.clicked.connect(self.web_view.reload)
         self.refresh_btn.setFixedSize(*button_size)
         self.refresh_btn.setStyleSheet(nav_button_style)
+        self.refresh_btn.setToolTip("Refresh Page")
         
-        self.home_btn = QPushButton("HOME")
+        self.home_btn = QPushButton()
+        self.home_btn.setIcon(self.load_icon('home'))
+        self.home_btn.setIconSize(QSize(int(button_width * 0.4), int(button_height * 0.4)))
         self.home_btn.clicked.connect(self.load_home_page)
         self.home_btn.setFixedSize(*button_size)
         self.home_btn.setStyleSheet(nav_button_style)
+        self.home_btn.setToolTip("Go Home")
         
-        self.fullscreen_btn = QPushButton("FULL")
+        self.fullscreen_btn = QPushButton()
+        self.fullscreen_btn.setIcon(self.load_icon('fullscreen'))
+        self.fullscreen_btn.setIconSize(QSize(int(button_width * 0.4), int(button_height * 0.4)))
         self.fullscreen_btn.clicked.connect(self.toggle_fullscreen)
         self.fullscreen_btn.setFixedSize(*button_size)
         self.fullscreen_btn.setStyleSheet(f"""
@@ -252,6 +265,7 @@ class KioskBrowser(QMainWindow):
                 background-color: #732d91;
             }}
         """)
+        self.fullscreen_btn.setToolTip("Toggle Fullscreen")
         
         # Arrange buttons in 2 rows: Top row (back, forward, refresh), Bottom row (home, fullscreen, shutdown if Pi)
         nav_top_row.addWidget(self.back_btn)
@@ -263,7 +277,9 @@ class KioskBrowser(QMainWindow):
         
         # Add shutdown button only on Raspberry Pi
         if self.is_raspberry_pi:
-            self.shutdown_btn = QPushButton("SHUTDOWN")
+            self.shutdown_btn = QPushButton()
+            self.shutdown_btn.setIcon(self.load_icon('shutdown'))
+            self.shutdown_btn.setIconSize(QSize(int(button_width * 0.4), int(button_height * 0.4)))
             self.shutdown_btn.clicked.connect(self.shutdown_pi)
             self.shutdown_btn.setFixedSize(*button_size)
             self.shutdown_btn.setStyleSheet(f"""
@@ -283,6 +299,7 @@ class KioskBrowser(QMainWindow):
                     background-color: #a93226;
                 }}
             """)
+            self.shutdown_btn.setToolTip("Shutdown Raspberry Pi")
             nav_bottom_row.addWidget(self.shutdown_btn)
             logging.info("Raspberry Pi detected - shutdown button added")
         
@@ -312,35 +329,38 @@ class KioskBrowser(QMainWindow):
         shortcuts_top_row.setSpacing(10)
         shortcuts_bottom_row.setSpacing(10)
         
-        # Define shortcuts with their URLs - arranged for 2x2 grid
+        # Define shortcuts with their URLs and icon names - arranged for 2x2 grid
         shortcuts = [
-            ("HOME ASST", "http://homeassistant.local:8123", "#e74c3c"),
-            ("YT MUSIC", "https://music.youtube.com", "#e67e22"),
-            ("GOOGLE", "https://www.google.com", "#27ae60"),
-            ("YOUTUBE", "https://www.youtube.com", "#c0392b")
+            ("HOME ASST", "http://homeassistant.local:8123", "#e74c3c", "homeassistant"),
+            ("YT MUSIC", "https://music.youtube.com", "#e67e22", "music"),
+            ("GOOGLE", "https://www.google.com", "#27ae60", "google"),
+            ("YOUTUBE", "https://www.youtube.com", "#c0392b", "youtube")
         ]
         
         # Calculate shortcut button dimensions for 2x2 grid
         shortcuts_width = int(window_width * 0.35)  # Available width for shortcuts
         shortcut_button_width = int((shortcuts_width - 30) / 2)  # 2 buttons per row, account for margins
         shortcut_button_height = int((nav_height - 30) / 2)  # Same height as nav section, 2 rows
-        shortcut_font_size = max(10, int(control_height * 0.08))  # Adjusted font for 2-row buttons
+        shortcut_font_size = max(8, int(control_height * 0.06))  # Smaller font for icon+text buttons
         
         self.shortcut_buttons = []
-        for i, (name, url, color) in enumerate(shortcuts):
+        for i, (name, url, color, icon_name) in enumerate(shortcuts):
             btn = QPushButton(name)
+            btn.setIcon(self.load_icon(icon_name))
+            btn.setIconSize(QSize(int(shortcut_button_width * 0.3), int(shortcut_button_height * 0.3)))
             btn.setFixedSize(shortcut_button_width, shortcut_button_height)
             btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {color};
                     border: none;
                     color: white;
-                    padding: 8px;
+                    padding: 4px;
                     font-size: {shortcut_font_size}px;
                     font-weight: bold;
                     border-radius: 8px;
                     margin: 2px;
                     border: 1px solid rgba(255, 255, 255, 0.2);
+                    text-align: center;
                 }}
                 QPushButton:hover {{
                     background-color: {self.darken_color(color)};
@@ -350,6 +370,7 @@ class KioskBrowser(QMainWindow):
                 }}
             """)
             btn.clicked.connect(lambda checked, u=url: self.load_url(u))
+            btn.setToolTip(f"Open {name}")
             
             # Add to appropriate row (0,1 = top row, 2,3 = bottom row)
             if i < 2:
@@ -559,18 +580,58 @@ class KioskBrowser(QMainWindow):
     def on_load_started(self):
         """Called when page starts loading"""
         logging.info("Page load started")
-        self.refresh_btn.setText("LOADING")
+        # Keep the refresh icon but add visual feedback via style
+        self.refresh_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: #f39c12;
+                border: none;
+                color: white;
+                font-size: {14}px;
+                font-weight: bold;
+                border-radius: 8px;
+                margin: 2px;
+            }}
+            QPushButton:hover {{
+                background-color: #e67e22;
+            }}
+            QPushButton:pressed {{
+                background-color: #d35400;
+            }}
+        """)
         
     def on_load_finished(self, success):
         """Called when page finishes loading"""
         current_url = self.web_view.url().toString()
         if success:
             logging.info(f"Page loaded successfully: {current_url}")
-            self.refresh_btn.setText("REFRESH")
         else:
             logging.error(f"Page failed to load: {current_url}")
-            self.refresh_btn.setText("REFRESH")
             
+        # Reset refresh button to normal style
+        font_size = max(14, int(self.height() * 0.20 * 0.06))  # Recalculate font size
+        self.refresh_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: #3498db;
+                border: none;
+                color: white;
+                font-size: {font_size}px;
+                font-weight: bold;
+                border-radius: 8px;
+                margin: 2px;
+            }}
+            QPushButton:hover {{
+                background-color: #2980b9;
+            }}
+            QPushButton:pressed {{
+                background-color: #21618c;
+            }}
+            QPushButton:disabled {{
+                background-color: #7f8c8d;
+                color: #bdc3c7;
+            }}
+        """)
+        
+        if not success:
             # Handle specific error cases
             if "homeassistant" in current_url.lower():
                 self.handle_network_error(current_url)
@@ -587,8 +648,24 @@ class KioskBrowser(QMainWindow):
     def on_load_progress(self, progress):
         """Called during page loading to show progress"""
         logging.debug(f"Load progress: {progress}%")
+        # Visual feedback through button color intensity
         if progress < 100:
-            self.refresh_btn.setText(f"LOAD {progress}%")
+            # Gradually change color from orange to green as loading progresses
+            red_val = max(100, 243 - int(progress * 1.4))  # Start orange, get greener
+            green_val = min(255, 156 + int(progress * 1.0))  # Start orange, get greener
+            blue_val = 18  # Keep blue component low for orange-green transition
+            
+            self.refresh_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: rgb({red_val}, {green_val}, {blue_val});
+                    border: none;
+                    color: white;
+                    font-size: {14}px;
+                    font-weight: bold;
+                    border-radius: 8px;
+                    margin: 2px;
+                }}
+            """)
             
     def handle_network_error(self, url):
         """Handle network connectivity issues"""
@@ -735,6 +812,15 @@ Debug Information:
         
         logging.info(debug_info)
         QMessageBox.information(self, "Debug Info", debug_info)
+    
+    def load_icon(self, icon_name):
+        """Load an SVG icon from the icons directory"""
+        icon_path = os.path.join(os.path.dirname(__file__), 'icons', f'{icon_name}.svg')
+        if os.path.exists(icon_path):
+            return QIcon(icon_path)
+        else:
+            logging.warning(f"Icon not found: {icon_path}")
+            return QIcon()  # Return empty icon if file not found
 
 def main():
     """Main function to run the application"""
