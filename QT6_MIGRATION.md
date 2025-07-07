@@ -72,10 +72,35 @@ pip install PyQt6 PyQt6-WebEngine
 ```
 
 ### Qt6 Not Available on Older Systems
-**Solution**: Use the Qt5 backup
+**Solution**: Use the automated build scripts
 ```bash
+# Quick install (tries multiple methods)
+chmod +x build_scripts/quick_install_pyqt6.sh
+./build_scripts/quick_install_pyqt6.sh
+
+# Or build from source (takes 4-8 hours)
+chmod +x build_scripts/build_pyqt6_rpi.sh
+./build_scripts/build_pyqt6_rpi.sh
+
+# Or use Qt5 backup
 python3 kiosk_browser_qt5_backup.py
 ```
+
+### Build PyQt6 from Source
+If you need to build PyQt6 manually, we've provided automated scripts:
+
+```bash
+# Quick install - tries system packages, piwheels, pip, then source build
+./build_scripts/quick_install_pyqt6.sh
+
+# Full source build - builds Qt6 and PyQt6 from scratch
+./build_scripts/build_pyqt6_rpi.sh
+
+# Troubleshooting - diagnose and fix issues
+./build_scripts/troubleshoot_pyqt6.sh
+```
+
+See `build_scripts/README.md` for detailed information about the build process.
 
 ### Performance Issues
 - Qt6 may use more resources than Qt5
