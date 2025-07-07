@@ -212,27 +212,27 @@ class KioskBrowser(QMainWindow):
         button_height = int((nav_height - 20) / 2)  # 2 rows, account for margins and spacing
         button_size = (button_width, button_height)
         
-        self.back_btn = QPushButton("←")
+        self.back_btn = QPushButton("BACK")
         self.back_btn.clicked.connect(self.web_view.back)
         self.back_btn.setFixedSize(*button_size)
         self.back_btn.setStyleSheet(nav_button_style)
         
-        self.forward_btn = QPushButton("→")
+        self.forward_btn = QPushButton("FWD")
         self.forward_btn.clicked.connect(self.web_view.forward)
         self.forward_btn.setFixedSize(*button_size)
         self.forward_btn.setStyleSheet(nav_button_style)
         
-        self.refresh_btn = QPushButton("⟳")
+        self.refresh_btn = QPushButton("REFRESH")
         self.refresh_btn.clicked.connect(self.web_view.reload)
         self.refresh_btn.setFixedSize(*button_size)
         self.refresh_btn.setStyleSheet(nav_button_style)
         
-        self.home_btn = QPushButton("🏠")
+        self.home_btn = QPushButton("HOME")
         self.home_btn.clicked.connect(self.load_home_page)
         self.home_btn.setFixedSize(*button_size)
         self.home_btn.setStyleSheet(nav_button_style)
         
-        self.fullscreen_btn = QPushButton("⛶")
+        self.fullscreen_btn = QPushButton("FULL")
         self.fullscreen_btn.clicked.connect(self.toggle_fullscreen)
         self.fullscreen_btn.setFixedSize(*button_size)
         self.fullscreen_btn.setStyleSheet(f"""
@@ -263,7 +263,7 @@ class KioskBrowser(QMainWindow):
         
         # Add shutdown button only on Raspberry Pi
         if self.is_raspberry_pi:
-            self.shutdown_btn = QPushButton("⏻")
+            self.shutdown_btn = QPushButton("SHUTDOWN")
             self.shutdown_btn.clicked.connect(self.shutdown_pi)
             self.shutdown_btn.setFixedSize(*button_size)
             self.shutdown_btn.setStyleSheet(f"""
@@ -271,7 +271,7 @@ class KioskBrowser(QMainWindow):
                     background-color: #e74c3c;
                     border: none;
                     color: white;
-                    font-size: {max(16, int(font_size * 1.1))}px;
+                    font-size: {max(12, int(font_size * 0.9))}px;
                     font-weight: bold;
                     border-radius: 8px;
                     margin: 2px;
@@ -314,10 +314,10 @@ class KioskBrowser(QMainWindow):
         
         # Define shortcuts with their URLs - arranged for 2x2 grid
         shortcuts = [
-            ("🏠 HA", "http://homeassistant.local:8123", "#e74c3c"),
-            ("🎵 YT Music", "https://music.youtube.com", "#e67e22"),
-            ("🔍 Google", "https://www.google.com", "#27ae60"),
-            ("📺 YouTube", "https://www.youtube.com", "#c0392b")
+            ("HOME ASST", "http://homeassistant.local:8123", "#e74c3c"),
+            ("YT MUSIC", "https://music.youtube.com", "#e67e22"),
+            ("GOOGLE", "https://www.google.com", "#27ae60"),
+            ("YOUTUBE", "https://www.youtube.com", "#c0392b")
         ]
         
         # Calculate shortcut button dimensions for 2x2 grid
@@ -484,21 +484,21 @@ class KioskBrowser(QMainWindow):
         </head>
         <body>
             <div class="container">
-                <h1>🏢 Office Kiosk</h1>
+                <h1>OFFICE KIOSK</h1>
                 <div class="welcome">Welcome! Use the shortcuts above to navigate to your favorite services.</div>
                 <div class="time" id="current-time"></div>
                 
                 <div class="shortcuts-grid">
                     <div class="shortcut-card">
-                        <h3>🏠 Home Assistant</h3>
+                        <h3>HOME ASSISTANT</h3>
                         <p>Control your smart home devices and automations</p>
                     </div>
                     <div class="shortcut-card">
-                        <h3>🎵 YouTube Music</h3>
+                        <h3>YOUTUBE MUSIC</h3>
                         <p>Stream your favorite music and playlists</p>
                     </div>
                     <div class="shortcut-card">
-                        <h3>🔍 Google</h3>
+                        <h3>GOOGLE</h3>
                         <p>Search the web and access Google services</p>
                     </div>
                 </div>
@@ -559,17 +559,17 @@ class KioskBrowser(QMainWindow):
     def on_load_started(self):
         """Called when page starts loading"""
         logging.info("Page load started")
-        self.refresh_btn.setText("⌛")
+        self.refresh_btn.setText("LOADING")
         
     def on_load_finished(self, success):
         """Called when page finishes loading"""
         current_url = self.web_view.url().toString()
         if success:
             logging.info(f"Page loaded successfully: {current_url}")
-            self.refresh_btn.setText("⟳")
+            self.refresh_btn.setText("REFRESH")
         else:
             logging.error(f"Page failed to load: {current_url}")
-            self.refresh_btn.setText("⟳")
+            self.refresh_btn.setText("REFRESH")
             
             # Handle specific error cases
             if "homeassistant" in current_url.lower():
@@ -588,7 +588,7 @@ class KioskBrowser(QMainWindow):
         """Called during page loading to show progress"""
         logging.debug(f"Load progress: {progress}%")
         if progress < 100:
-            self.refresh_btn.setText(f"⌛{progress}%")
+            self.refresh_btn.setText(f"LOAD {progress}%")
             
     def handle_network_error(self, url):
         """Handle network connectivity issues"""
