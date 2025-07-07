@@ -209,7 +209,7 @@ class KioskBrowser(QMainWindow):
         # Create navigation buttons with proportional size for 2-row layout
         # Button size based on available space in 2 rows
         button_width = int((nav_width - 40) / 3)  # 3 buttons per row, account for margins
-        button_height = int((nav_height - 30) / 2)  # 2 rows, account for margins and spacing
+        button_height = int((nav_height - 20) / 2)  # 2 rows, account for margins and spacing
         button_size = (button_width, button_height)
         
         self.back_btn = QPushButton("←")
