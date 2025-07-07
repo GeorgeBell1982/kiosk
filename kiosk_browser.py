@@ -123,7 +123,7 @@ class KioskBrowser(QMainWindow):
         # Use percentage of window height instead of fixed pixels
         window_height = self.height()
         window_width = self.width()
-        control_height = max(80, int(window_height * 0.12))  # 12% of window height, minimum 80px for 1024x600
+        control_height = max(120, int(window_height * 0.20))  # 20% of window height, minimum 120px for 2-row layout
         control_frame.setFixedHeight(control_height)
         control_frame.setStyleSheet("""
             QFrame {
@@ -156,10 +156,10 @@ class KioskBrowser(QMainWindow):
         
         # Left side - Navigation controls group
         nav_controls_group = QFrame()
-        # Navigation controls group height
+        # Navigation controls group height - taller for 2-row layout
         nav_width_percent = 0.5 if self.is_raspberry_pi else 0.4  # 50% vs 40% of window width
         nav_width = int(window_width * nav_width_percent)
-        nav_height = int(window_height * 0.08)  # 8% of window height for better 1024x600 fit
+        nav_height = int(window_height * 0.16)  # 16% of window height for 2-row button layout
         nav_controls_group.setFixedWidth(nav_width)
         nav_controls_group.setFixedHeight(nav_height)
         nav_controls_group.setStyleSheet("""
@@ -171,13 +171,19 @@ class KioskBrowser(QMainWindow):
                 border: 1px solid rgba(255, 255, 255, 0.1);
             }
         """)
-        nav_controls_layout = QHBoxLayout()
-        nav_controls_layout.setSpacing(15)  # More spacing for larger buttons
+        nav_controls_layout = QVBoxLayout()  # Changed to vertical for 2-row layout
+        nav_controls_layout.setSpacing(5)  # Reduced spacing for compact 2-row layout
         nav_controls_layout.setContentsMargins(5, 5, 5, 5)  # Minimal margins for maximum button space
         nav_controls_group.setLayout(nav_controls_layout)
         
-        # Navigation buttons - consistent sizing with proportional fonts for 1024x600
-        font_size = max(12, int(control_height * 0.08))  # Smaller font size for compact buttons
+        # Create top and bottom rows for navigation buttons
+        nav_top_row = QHBoxLayout()
+        nav_bottom_row = QHBoxLayout()
+        nav_top_row.setSpacing(10)
+        nav_bottom_row.setSpacing(10)
+        
+        # Navigation buttons - consistent sizing with proportional fonts for 2-row layout
+        font_size = max(14, int(control_height * 0.06))  # Adjusted font size for 2-row buttons
         nav_button_style = f"""
             QPushButton {{
                 background-color: #3498db;
@@ -185,7 +191,7 @@ class KioskBrowser(QMainWindow):
                 color: white;
                 font-size: {font_size}px;
                 font-weight: bold;
-                border-radius: 12px;
+                border-radius: 8px;
                 margin: 2px;
             }}
             QPushButton:hover {{
@@ -200,10 +206,10 @@ class KioskBrowser(QMainWindow):
             }}
         """
         
-        # Create navigation buttons with proportional size
-        # Button size based on control frame dimensions - smaller for 1024x600
-        button_width = int(control_height * 0.5)  # 50% of control height for more compact buttons
-        button_height = int(control_height * 0.35)  # 35% of control height for more compact buttons
+        # Create navigation buttons with proportional size for 2-row layout
+        # Button size based on available space in 2 rows
+        button_width = int((nav_width - 40) / 3)  # 3 buttons per row, account for margins
+        button_height = int((nav_height - 30) / 2)  # 2 rows, account for margins and spacing
         button_size = (button_width, button_height)
         
         self.back_btn = QPushButton("←")
@@ -234,9 +240,9 @@ class KioskBrowser(QMainWindow):
                 background-color: #9b59b6;
                 border: none;
                 color: white;
-                font-size: {max(18, int(font_size * 0.9))}px;
+                font-size: {max(16, int(font_size * 1.1))}px;
                 font-weight: bold;
-                border-radius: 12px;
+                border-radius: 8px;
                 margin: 2px;
             }}
             QPushButton:hover {{
@@ -247,11 +253,13 @@ class KioskBrowser(QMainWindow):
             }}
         """)
         
-        nav_controls_layout.addWidget(self.back_btn)
-        nav_controls_layout.addWidget(self.forward_btn)
-        nav_controls_layout.addWidget(self.refresh_btn)
-        nav_controls_layout.addWidget(self.home_btn)
-        nav_controls_layout.addWidget(self.fullscreen_btn)
+        # Arrange buttons in 2 rows: Top row (back, forward, refresh), Bottom row (home, fullscreen, shutdown if Pi)
+        nav_top_row.addWidget(self.back_btn)
+        nav_top_row.addWidget(self.forward_btn)
+        nav_top_row.addWidget(self.refresh_btn)
+        
+        nav_bottom_row.addWidget(self.home_btn)
+        nav_bottom_row.addWidget(self.fullscreen_btn)
         
         # Add shutdown button only on Raspberry Pi
         if self.is_raspberry_pi:
@@ -263,9 +271,9 @@ class KioskBrowser(QMainWindow):
                     background-color: #e74c3c;
                     border: none;
                     color: white;
-                    font-size: {max(18, int(font_size * 0.9))}px;
+                    font-size: {max(16, int(font_size * 1.1))}px;
                     font-weight: bold;
-                    border-radius: 12px;
+                    border-radius: 8px;
                     margin: 2px;
                 }}
                 QPushButton:hover {{
@@ -275,8 +283,12 @@ class KioskBrowser(QMainWindow):
                     background-color: #a93226;
                 }}
             """)
-            nav_controls_layout.addWidget(self.shutdown_btn)
+            nav_bottom_row.addWidget(self.shutdown_btn)
             logging.info("Raspberry Pi detected - shutdown button added")
+        
+        # Add the two rows to the main navigation layout
+        nav_controls_layout.addLayout(nav_top_row)
+        nav_controls_layout.addLayout(nav_bottom_row)
         
         # Right side - Shortcuts group
         shortcuts_group = QFrame()
@@ -289,12 +301,18 @@ class KioskBrowser(QMainWindow):
                 border: 1px solid rgba(255, 255, 255, 0.1);
             }
         """)
-        shortcuts_layout = QHBoxLayout()
-        shortcuts_layout.setSpacing(15)  # More spacing for larger buttons
+        shortcuts_layout = QVBoxLayout()  # Changed to vertical for 2-row layout
+        shortcuts_layout.setSpacing(5)  # Reduced spacing for compact 2-row layout
         shortcuts_layout.setContentsMargins(5, 5, 5, 5)  # Minimal margins for maximum button space
         shortcuts_group.setLayout(shortcuts_layout)
         
-        # Define shortcuts with their URLs
+        # Create top and bottom rows for shortcut buttons
+        shortcuts_top_row = QHBoxLayout()
+        shortcuts_bottom_row = QHBoxLayout()
+        shortcuts_top_row.setSpacing(10)
+        shortcuts_bottom_row.setSpacing(10)
+        
+        # Define shortcuts with their URLs - arranged for 2x2 grid
         shortcuts = [
             ("🏠 HA", "http://homeassistant.local:8123", "#e74c3c"),
             ("🎵 YT Music", "https://music.youtube.com", "#e67e22"),
@@ -302,23 +320,25 @@ class KioskBrowser(QMainWindow):
             ("📺 YouTube", "https://www.youtube.com", "#c0392b")
         ]
         
+        # Calculate shortcut button dimensions for 2x2 grid
+        shortcuts_width = int(window_width * 0.35)  # Available width for shortcuts
+        shortcut_button_width = int((shortcuts_width - 30) / 2)  # 2 buttons per row, account for margins
+        shortcut_button_height = int((nav_height - 30) / 2)  # Same height as nav section, 2 rows
+        shortcut_font_size = max(10, int(control_height * 0.08))  # Adjusted font for 2-row buttons
+        
         self.shortcut_buttons = []
-        for name, url, color in shortcuts:
+        for i, (name, url, color) in enumerate(shortcuts):
             btn = QPushButton(name)
-            # Proportional sizing for shortcut buttons
-            shortcut_width = int(window_width * 0.15)  # 15% of window width
-            shortcut_height = button_height  # Same height as nav buttons
-            shortcut_font_size = max(10, int(control_height * 0.12))  # Smaller font for compact text buttons
-            btn.setFixedSize(shortcut_width, shortcut_height)
+            btn.setFixedSize(shortcut_button_width, shortcut_button_height)
             btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {color};
                     border: none;
                     color: white;
-                    padding: 12px;
+                    padding: 8px;
                     font-size: {shortcut_font_size}px;
                     font-weight: bold;
-                    border-radius: 12px;
+                    border-radius: 8px;
                     margin: 2px;
                     border: 1px solid rgba(255, 255, 255, 0.2);
                 }}
@@ -330,8 +350,18 @@ class KioskBrowser(QMainWindow):
                 }}
             """)
             btn.clicked.connect(lambda checked, u=url: self.load_url(u))
-            shortcuts_layout.addWidget(btn)
+            
+            # Add to appropriate row (0,1 = top row, 2,3 = bottom row)
+            if i < 2:
+                shortcuts_top_row.addWidget(btn)
+            else:
+                shortcuts_bottom_row.addWidget(btn)
+            
             self.shortcut_buttons.append(btn)
+        
+        # Add the two rows to the shortcuts layout
+        shortcuts_layout.addLayout(shortcuts_top_row)
+        shortcuts_layout.addLayout(shortcuts_bottom_row)
         
         # Add groups to main layout
         control_layout.addWidget(nav_controls_group)
