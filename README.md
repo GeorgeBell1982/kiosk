@@ -366,21 +366,7 @@ This comprehensive script will check:
 - System logs and errors
 - Provides specific fixes for common issues
 
-### 2. Waveshare 1024x600 Touchscreen Setup
-```bash
-cd /home/pi/office_kiosk
-chmod +x setup_waveshare.sh
-./setup_waveshare.sh
-```
-
-For Waveshare 1024x600 displays, this script will:
-- Configure correct display resolution (1024x600@60Hz)
-- Enable I2C and SPI for touchscreen
-- Set up touch calibration
-- Optimize for kiosk mode
-- Disable screen blanking
-
-### 3. Setup Auto-Updates
+### 2. Setup Auto-Updates
 ```bash
 cd /home/pi/office_kiosk
 chmod +x setup_auto_update.sh
@@ -391,20 +377,13 @@ Choose option 1 to enable automatic updates every 30 minutes from GitHub.
 
 ## Display Support
 
-### Waveshare 1024x600 Touchscreens
-The kiosk browser is optimized for Waveshare 1024x600 displays:
+### Touchscreen Displays
+The kiosk browser is optimized for touchscreen displays:
 - **Automatic resolution detection** and configuration
-- **Touch calibration** tools included
-- **Optimized UI scaling** for 1024x600 resolution
-- **Screen rotation support** if needed
+- **Responsive UI scaling** for different resolutions
+- **Touch-friendly interface** design
 
-**Quick setup for Waveshare displays:**
-```bash
-./install_rpi.sh
-# Choose option 3: "Waveshare 1024x600 touchscreen setup"
-```
-
-### Other Display Resolutions
+### Different Display Resolutions
 The application automatically adapts to different screen sizes with responsive design.
 
 ## Common Installation Issues
