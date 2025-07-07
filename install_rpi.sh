@@ -48,23 +48,38 @@ sudo apt update && sudo apt upgrade -y
 # Install required system packages
 echo "Installing system dependencies..."
 sudo apt install -y python3 python3-pip python3-venv
-sudo apt install -y python3-pyqt5 
-sudo apt install -y x11-xserver-utils unclutter
 
-# Try to install WebEngine - package name varies by OS version
-echo "Installing PyQt5 WebEngine..."
-if sudo apt install -y python3-pyqt5.qtwebengine 2>/dev/null; then
-    echo "Installed python3-pyqt5.qtwebengine"
-elif sudo apt install -y python3-pyqt5-qtwebengine 2>/dev/null; then
-    echo "Installed python3-pyqt5-qtwebengine (alternative name)"
-elif sudo apt install -y python3-pyqt5.qtwebkit 2>/dev/null; then
-    echo "Installed python3-pyqt5.qtwebkit (fallback for older systems)"
-    echo "Warning: Using QtWebKit instead of QtWebEngine"
+# Install Qt6 packages (preferred for modern compatibility)
+echo "Installing Qt6 packages (for better YouTube and modern web support)..."
+if sudo apt install -y python3-pyqt6 python3-pyqt6.qtwebengine 2>/dev/null; then
+    echo "Successfully installed Qt6 packages"
+    QT_VERSION="qt6"
 else
-    echo "Warning: Could not install PyQt5 WebEngine via apt"
-    echo "Will try to install via pip in virtual environment"
-    WEBENGINE_FALLBACK=true
+    echo "Qt6 not available, falling back to Qt5..."
+    # Fallback to Qt5 for older systems
+    sudo apt install -y python3-pyqt5 
+    
+    # Try to install WebEngine - package name varies by OS version
+    echo "Installing PyQt5 WebEngine..."
+    if sudo apt install -y python3-pyqt5.qtwebengine 2>/dev/null; then
+        echo "Installed python3-pyqt5.qtwebengine"
+        QT_VERSION="qt5"
+    elif sudo apt install -y python3-pyqt5-qtwebengine 2>/dev/null; then
+        echo "Installed python3-pyqt5-qtwebengine (alternative name)"
+        QT_VERSION="qt5"
+    elif sudo apt install -y python3-pyqt5.qtwebkit 2>/dev/null; then
+        echo "Installed python3-pyqt5.qtwebkit (fallback for older systems)"
+        echo "Warning: Using QtWebKit instead of QtWebEngine"
+        QT_VERSION="qt5"
+    else
+        echo "Warning: Could not install PyQt5 WebEngine via apt"
+        echo "Will try to install via pip in virtual environment"
+        WEBENGINE_FALLBACK=true
+        QT_VERSION="qt5"
+    fi
 fi
+
+sudo apt install -y x11-xserver-utils unclutter
 
 # Create virtual environment if it doesn't exist
 if [ ! -d ".venv" ]; then
@@ -95,23 +110,41 @@ if [ "$WEBENGINE_FALLBACK" = "true" ]; then
     }
 fi
 
-# Verify PyQt5 is available
-echo "Verifying PyQt5 installation..."
-.venv/bin/python -c "import PyQt5; print('PyQt5 is available')" || {
-    echo "Error: PyQt5 not found. Please ensure system packages are installed:"
-    echo "sudo apt install python3-pyqt5"
-    exit 1
-}
-
-# Try to verify WebEngine (but don't fail if not available)
-echo "Verifying WebEngine installation..."
-.venv/bin/python -c "import PyQt5.QtWebEngineWidgets; print('QtWebEngine is available')" || {
-    echo "Warning: QtWebEngine not available. Trying QtWebKit as fallback..."
-    .venv/bin/python -c "import PyQt5.QtWebKit; print('QtWebKit is available as fallback')" || {
-        echo "Warning: Neither QtWebEngine nor QtWebKit is available"
-        echo "The browser functionality may be limited"
+# Verify Qt installation
+echo "Verifying Qt installation..."
+if [ "$QT_VERSION" = "qt6" ]; then
+    .venv/bin/python -c "import PyQt6; print('Qt6 is available - modern web support enabled!')" || {
+        echo "Error: Qt6 not found. Please ensure system packages are installed:"
+        echo "sudo apt install python3-pyqt6 python3-pyqt6.qtwebengine"
+        exit 1
     }
-}
+    
+    # Try to verify WebEngine (but don't fail if not available)
+    echo "Verifying Qt6 WebEngine installation..."
+    .venv/bin/python -c "import PyQt6.QtWebEngineWidgets; print('Qt6 WebEngine is available - YouTube compatibility enabled!')" || {
+        echo "Warning: Qt6 WebEngine not available. Limited web functionality."
+    }
+    
+    echo "✅ Qt6 setup complete - you should have better YouTube and modern web compatibility!"
+else
+    .venv/bin/python -c "import PyQt5; print('PyQt5 is available')" || {
+        echo "Error: PyQt5 not found. Please ensure system packages are installed:"
+        echo "sudo apt install python3-pyqt5"
+        exit 1
+    }
+
+    # Try to verify WebEngine (but don't fail if not available)
+    echo "Verifying WebEngine installation..."
+    .venv/bin/python -c "import PyQt5.QtWebEngineWidgets; print('QtWebEngine is available')" || {
+        echo "Warning: QtWebEngine not available. Trying QtWebKit as fallback..."
+        .venv/bin/python -c "import PyQt5.QtWebKit; print('QtWebKit is available as fallback')" || {
+            echo "Warning: Neither QtWebEngine nor QtWebKit is available"
+            echo "The browser functionality may be limited"
+        }
+    }
+    
+    echo "ℹ️  Using Qt5 - consider upgrading to newer Raspberry Pi OS for Qt6 support"
+fi
 
 # Make scripts executable
 chmod +x start_kiosk.sh

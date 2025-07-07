@@ -72,16 +72,25 @@ fi
 if [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
     if grep -q "Raspberry Pi" /proc/cpuinfo 2>/dev/null; then
-        # On Raspberry Pi, try system packages first, then create venv with system site packages
-        echo "Installing system PyQt5 packages..."
+        # On Raspberry Pi, try Qt6 first, then fall back to Qt5
+        echo "Installing system Qt packages..."
         if command -v apt >/dev/null 2>&1; then
             sudo apt update -qq 2>/dev/null || true
-            sudo apt install -y python3-pyqt5 python3-pyqt5.qtwebengine python3-pyqt5.qtwebkit 2>/dev/null || true
+            
+            # Try Qt6 first (for modern compatibility)
+            if sudo apt install -y python3-pyqt6 python3-pyqt6.qtwebengine 2>/dev/null; then
+                echo "✅ Qt6 packages installed"
+                QT_VERSION="qt6"
+            else
+                echo "Qt6 not available, installing Qt5..."
+                sudo apt install -y python3-pyqt5 python3-pyqt5.qtwebengine python3-pyqt5.qtwebkit 2>/dev/null || true
+                QT_VERSION="qt5"
+            fi
         fi
         
-        # Create venv with system site packages for PyQt5 access
+        # Create venv with system site packages for Qt access
         python3 -m venv --system-site-packages .venv
-        echo "Installing additional dependencies (using system PyQt5)..."
+        echo "Installing additional dependencies (using system Qt packages)..."
         if [ -f "requirements-rpi.txt" ]; then
             .venv/bin/pip install -r requirements-rpi.txt
         fi
@@ -103,31 +112,74 @@ else
     PYTHON_CMD=".venv/bin/python"
 fi
 
-# Test PyQt5 import before starting
-echo "Testing PyQt5 import..."
-if ! $PYTHON_CMD -c "import PyQt5.QtWidgets; print('✅ PyQt5 import successful')" 2>/dev/null; then
-    echo "❌ PyQt5 import failed!"
-    echo "Attempting to install PyQt5..."
+# Test Qt versions and determine which to use
+echo "Testing Qt compatibility..."
+QT_TO_USE="none"
+
+# Test Qt6 first (preferred)
+if $PYTHON_CMD -c "import PyQt6.QtWidgets; print('✅ Qt6 available')" 2>/dev/null; then
+    if $PYTHON_CMD -c "import PyQt6.QtWebEngineWidgets; print('✅ Qt6 WebEngine available')" 2>/dev/null; then
+        echo "🎉 Using Qt6 - best modern web compatibility!"
+        QT_TO_USE="qt6"
+        KIOSK_SCRIPT="kiosk_browser.py"
+    else
+        echo "⚠️ Qt6 available but WebEngine missing"
+    fi
+fi
+
+# Fallback to Qt5 if Qt6 not available or incomplete
+if [ "$QT_TO_USE" = "none" ] && $PYTHON_CMD -c "import PyQt5.QtWidgets; print('✅ Qt5 available')" 2>/dev/null; then
+    if $PYTHON_CMD -c "import PyQt5.QtWebEngineWidgets; print('✅ Qt5 WebEngine available')" 2>/dev/null; then
+        echo "⚠️ Using Qt5 - consider upgrading to Qt6 for better YouTube support"
+        QT_TO_USE="qt5"
+        # Use Qt5 backup if main file is Qt6
+        if [ -f "kiosk_browser_qt5_backup.py" ]; then
+            KIOSK_SCRIPT="kiosk_browser_qt5_backup.py"
+        else
+            KIOSK_SCRIPT="kiosk_browser.py"
+        fi
+    elif $PYTHON_CMD -c "import PyQt5.QtWebKit; print('✅ Qt5 WebKit available')" 2>/dev/null; then
+        echo "⚠️ Using Qt5 WebKit - limited modern web support"
+        QT_TO_USE="qt5_webkit"
+        KIOSK_SCRIPT="kiosk_browser_qt5_backup.py"
+    fi
+fi
+
+# If no Qt version works, try to install
+if [ "$QT_TO_USE" = "none" ]; then
+    echo "❌ No compatible Qt version found!"
+    echo "Attempting to install Qt packages..."
     
     if grep -q "Raspberry Pi" /proc/cpuinfo 2>/dev/null; then
-        echo "Installing system PyQt5 packages..."
-        sudo apt install -y python3-pyqt5 python3-pyqt5.qtwebengine python3-pyqt5.qtwebkit 2>/dev/null || true
+        echo "Installing system Qt packages..."
+        sudo apt install -y python3-pyqt6 python3-pyqt6.qtwebengine 2>/dev/null || \
+        sudo apt install -y python3-pyqt5 python3-pyqt5.qtwebengine 2>/dev/null || true
         
         # Try system python if venv python fails
-        if ! $PYTHON_CMD -c "import PyQt5.QtWidgets" 2>/dev/null; then
+        if ! $PYTHON_CMD -c "import PyQt6.QtWidgets" 2>/dev/null && ! $PYTHON_CMD -c "import PyQt5.QtWidgets" 2>/dev/null; then
             echo "Using system Python as fallback..."
             PYTHON_CMD="python3"
         fi
     else
         # Try pip install as fallback
-        $PYTHON_CMD -m pip install PyQt5 PyQtWebEngine 2>/dev/null || $PYTHON_CMD -m pip install PyQt5 PyQtWebKit 2>/dev/null || true
+        $PYTHON_CMD -m pip install PyQt6 PyQt6-WebEngine 2>/dev/null || \
+        $PYTHON_CMD -m pip install PyQt5 PyQtWebEngine 2>/dev/null || \
+        $PYTHON_CMD -m pip install PyQt5 PyQtWebKit 2>/dev/null || true
     fi
     
-    # Final test
-    if ! $PYTHON_CMD -c "import PyQt5.QtWidgets" 2>/dev/null; then
-        echo "❌ PyQt5 still not available. Please install manually:"
-        echo "   sudo apt install python3-pyqt5 python3-pyqt5.qtwebengine"
-        echo "   or run: ./debug_startup.sh"
+    # Re-test after installation attempt
+    if $PYTHON_CMD -c "import PyQt6.QtWidgets" 2>/dev/null; then
+        QT_TO_USE="qt6"
+        KIOSK_SCRIPT="kiosk_browser.py"
+    elif $PYTHON_CMD -c "import PyQt5.QtWidgets" 2>/dev/null; then
+        QT_TO_USE="qt5"
+        KIOSK_SCRIPT="kiosk_browser_qt5_backup.py"
+    else
+        echo "❌ Qt still not available. Please install manually:"
+        echo "   For Qt6: sudo apt install python3-pyqt6 python3-pyqt6.qtwebengine"
+        echo "   For Qt5: sudo apt install python3-pyqt5 python3-pyqt5.qtwebengine"
+        echo "   Or run: ./debug_startup.sh"
+        echo "   Or run: python3 test_qt_version.py"
         exit 1
     fi
 fi
@@ -142,9 +194,9 @@ if grep -q "Raspberry Pi" /proc/cpuinfo 2>/dev/null; then
     fi
 fi
 
-# Run the application with the determined Python command
-echo "Starting kiosk browser with: $PYTHON_CMD"
-$PYTHON_CMD kiosk_browser.py $ARGS
+# Run the application with the determined Python command and script
+echo "Starting kiosk browser with: $PYTHON_CMD $KIOSK_SCRIPT ($QT_TO_USE)"
+$PYTHON_CMD $KIOSK_SCRIPT $ARGS
 
 echo
 echo "Office Kiosk Browser has stopped."

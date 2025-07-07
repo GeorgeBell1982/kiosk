@@ -1,24 +1,33 @@
-# Office Kiosk Browser
+# Office Kiosk Browser - Qt6 Edition
 
-A touchscreen-friendly browser application designed for Raspberry Pi kiosks with quick access shortcuts to Home Assistant, YouTube Music, and other services. Features a modern, responsive design with robust error handling and debugging capabilities.
+A touchscreen-friendly browser application designed for Raspberry Pi kiosks with quick access shortcuts to Home Assistant, YouTube Music, and other services. **Now powered by Qt6 for better modern web compatibility and improved YouTube support!**
 
-## 🚨 Quick Fix: "No module named PyQt5" Error
+## ✨ What's New in Qt6 Version
 
-If you get this error when trying to start the kiosk, run these commands on your Raspberry Pi:
+- **No More "Outdated Browser" Errors**: Qt6 WebEngine provides modern Chromium-based rendering that YouTube and other sites recognize
+- **Better Video Support**: Improved codec support for streaming services
+- **Enhanced Performance**: More efficient resource usage and better hardware acceleration
+- **Future-Proof**: Qt6 is the current generation with active development and security updates
 
+## 🚨 Quick Setup: Qt6 Installation
+
+### For Raspberry Pi (Recommended Method)
 ```bash
-# Install PyQt5 system packages
+# Install Qt6 system packages (Raspberry Pi OS Bookworm and later)
 sudo apt update
-sudo apt install python3-pyqt5 python3-pyqt5.qtwebengine
+sudo apt install python3-pyqt6 python3-pyqt6.qtwebengine
 
 # Test if it works
-python3 -c "import PyQt5.QtWidgets; print('PyQt5 OK')"
+python3 -c "import PyQt6.QtWidgets; print('Qt6 OK')"
 
 # Run the debugging script for more help
 cd /home/pi/office_kiosk
 chmod +x debug_startup.sh
 ./debug_startup.sh
 ```
+
+### Legacy Qt5 Support
+If you encounter issues with Qt6, a Qt5 backup version is available as `kiosk_browser_qt5_backup.py`
 
 ## Features
 
@@ -44,30 +53,52 @@ chmod +x debug_startup.sh
 
 ## Requirements
 
-- Python 3.7 or higher
-- PyQt5 and PyQtWebEngine
+- Python 3.8 or higher (Qt6 requirement)
+- PyQt6 and PyQt6-WebEngine
+- For legacy systems: PyQt5 and PyQtWebEngine (use `kiosk_browser_qt5_backup.py`)
 
 ## Installation
+
+### Quick Compatibility Check
+```bash
+python3 test_qt_version.py
+```
+This will tell you which Qt version to use and how to install missing packages.
 
 ### Windows (for testing)
 
 1. Clone or download this repository
-2. Run the setup script:
+2. Install Qt6 packages:
+   ```cmd
+   pip install PyQt6 PyQt6-WebEngine
+   ```
+3. Run the setup script:
    ```cmd
    start_kiosk.bat
    ```
 
-### Raspberry Pi / Linux
+### Raspberry Pi / Linux (Recommended: Qt6)
 
 1. Clone or download this repository
-2. Make the startup script executable:
+2. Install Qt6 system packages:
+   ```bash
+   sudo apt update
+   sudo apt install python3-pyqt6 python3-pyqt6.qtwebengine
+   ```
+3. Make the startup script executable:
    ```bash
    chmod +x start_kiosk.sh
    ```
-3. Run the application:
+4. Run the application:
    ```bash
    ./start_kiosk.sh
    ```
+
+### Legacy Qt5 Support
+If Qt6 is not available on your system, use the Qt5 backup:
+```bash
+python3 kiosk_browser_qt5_backup.py
+```
 
 **Note:** When running on Raspberry Pi, the application automatically starts in fullscreen mode for optimal kiosk operation.
 

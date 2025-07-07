@@ -1,48 +1,34 @@
 #!/usr/bin/env python3
 """
-Office Kiosk Browser Application - Qt6 Version
+Office Kiosk Browser Application
 A touchscreen-friendly browser with shortcuts for Home Assistant, YouTube Music, and Google.
 Designed for Raspberry Pi but works on Windows for testing.
-Upgraded to Qt6 for better modern web compatibility.
 """
 
 import sys
 import logging
 import subprocess
 import os
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                             QWidget, QPushButton, QFrame, QMessageBox, QLabel)
 
-# Try to import WebEngine
+# Try to import WebEngine, fall back to WebKit if not available
 try:
-    from PyQt6.QtWebEngineWidgets import QWebEngineView
-    from PyQt6.QtWebEngineCore import QWebEngineSettings, QWebEngineProfile
+    from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
     WEBENGINE_AVAILABLE = True
-    logging.info("Using Qt6 QtWebEngine for web rendering")
+    logging.info("Using QtWebEngine for web rendering")
 except ImportError:
-    logging.error("Qt6 WebEngine not available - please install PyQt6-WebEngine")
-    WEBENGINE_AVAILABLE = False
-    # Create a minimal placeholder
-    class QWebEngineView(QWidget):
-        def __init__(self):
-            super().__init__()
-        def setHtml(self, html):
-            pass
-        def load(self, url):
-            pass
-        def back(self):
-            pass
-        def forward(self):
-            pass
-        def reload(self):
-            pass
-    class QWebEngineSettings:
-        pass
-    class QWebEngineProfile:
-        pass
+    try:
+        from PyQt5.QtWebKitWidgets import QWebView as QWebEngineView
+        from PyQt5.QtWebKit import QWebSettings as QWebEngineSettings
+        WEBENGINE_AVAILABLE = False
+        logging.warning("QtWebEngine not available, falling back to QtWebKit")
+    except ImportError:
+        logging.error("Neither QtWebEngine nor QtWebKit available")
+        raise ImportError("No web rendering engine available")
 
-from PyQt6.QtCore import QUrl, Qt, QSize
-from PyQt6.QtGui import QFont, QIcon
+from PyQt5.QtCore import QUrl, Qt, QSize
+from PyQt5.QtGui import QFont, QIcon
 from version import get_version_string, get_full_version_info
 
 # Set up logging
@@ -54,7 +40,7 @@ class KioskBrowser(QMainWindow):
         
         # Log version information
         version_info = get_full_version_info()
-        logging.info(f"Starting Office Kiosk Browser {version_info['formatted']} - Qt6 Version")
+        logging.info(f"Starting Office Kiosk Browser {version_info['formatted']}")
         
         self.web_view = None  # Initialize early
         self.is_raspberry_pi = self.detect_raspberry_pi()
@@ -73,7 +59,7 @@ class KioskBrowser(QMainWindow):
         
     def setup_ui(self):
         """Setup the user interface"""
-        self.setWindowTitle("Office Kiosk Browser - Qt6")
+        self.setWindowTitle("Office Kiosk Browser")
         
         # Set window size optimized for 1024x600 displays (Waveshare touchscreen)
         if self.is_raspberry_pi:
@@ -95,11 +81,7 @@ class KioskBrowser(QMainWindow):
         if WEBENGINE_AVAILABLE:
             self.web_view = QWebEngineView()
         else:
-            self.web_view = QWebEngineView()  # Placeholder when WebEngine not available
-            # Show error message
-            error_label = QLabel("Qt6 WebEngine not available. Please install PyQt6-WebEngine package.")
-            error_label.setStyleSheet("color: red; font-weight: bold; padding: 20px;")
-            main_layout.addWidget(error_label)
+            self.web_view = QWebEngineView()  # This is actually QWebView when using WebKit
         
         # Create control panel
         self.create_control_panel(main_layout)
@@ -135,15 +117,6 @@ class KioskBrowser(QMainWindow):
             }
         """)
         
-    def load_icon(self, icon_name):
-        """Load an SVG icon from the icons directory"""
-        icon_path = os.path.join(os.path.dirname(__file__), 'icons', f'{icon_name}.svg')
-        if os.path.exists(icon_path):
-            return QIcon(icon_path)
-        else:
-            logging.warning(f"Icon not found: {icon_path}")
-            return QIcon()  # Return empty icon if file not found
-        
     def create_control_panel(self, main_layout):
         """Create the control panel with controls on left and shortcuts on right"""
         control_frame = QFrame()
@@ -167,7 +140,7 @@ class KioskBrowser(QMainWindow):
         
         # Add version label as a small overlay in the top-left corner
         version_info = get_full_version_info()
-        version_label = QLabel(f"{version_info['formatted']} (Qt6)", control_frame)
+        version_label = QLabel(version_info['formatted'], control_frame)
         version_label.setStyleSheet("""
             QLabel {
                 color: #bdc3c7;
@@ -178,7 +151,7 @@ class KioskBrowser(QMainWindow):
                 border-radius: 3px;
             }
         """)
-        version_label.move(25, 0)  # Position with more spacing from edge
+        version_label.move(25, 0)  # Position with more spacing from edge and move up 5 more pixels
         version_label.adjustSize()  # Resize to fit content
         
         # Left side - Navigation controls group
@@ -426,43 +399,41 @@ class KioskBrowser(QMainWindow):
         return f"#{darkened[0]:02x}{darkened[1]:02x}{darkened[2]:02x}"
         
     def setup_web_view(self):
-        """Configure the web view settings with Qt6 enhancements"""
-        if not WEBENGINE_AVAILABLE:
-            logging.warning("WebEngine not available - web functionality limited")
-            return
-            
-        # Qt6 WebEngine has better modern web support by default
+        """Configure the web view settings"""
         settings = self.web_view.settings()
         
-        # Enhanced settings for Qt6
-        settings.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.ErrorPageEnabled, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.ShowScrollBars, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.AllowRunningInsecureContent, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.FullScreenSupportEnabled, True)
-        
-        # Qt6 WebEngine profile for modern compatibility
-        profile = self.web_view.page().profile()
-        
-        # Set a modern user agent that YouTube will accept
-        modern_user_agent = (
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36"
-        )
-        profile.setHttpUserAgent(modern_user_agent)
-        logging.info(f"Set modern user agent: {modern_user_agent}")
-        
-        # Additional optimizations for Raspberry Pi
-        if self.is_raspberry_pi:
-            # More conservative settings for Pi
-            settings.setAttribute(QWebEngineSettings.WebAttribute.HyperlinkAuditingEnabled, False)
-            logging.info("Applied Raspberry Pi specific Qt6 WebEngine settings")
+        if WEBENGINE_AVAILABLE:
+            # WebEngine settings for better compatibility
+            settings.setAttribute(QWebEngineSettings.PluginsEnabled, True)
+            settings.setAttribute(QWebEngineSettings.JavascriptEnabled, True)
+            settings.setAttribute(QWebEngineSettings.LocalStorageEnabled, True)
+            settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+            settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
+            settings.setAttribute(QWebEngineSettings.ErrorPageEnabled, True)
+            settings.setAttribute(QWebEngineSettings.ShowScrollBars, True)
+            settings.setAttribute(QWebEngineSettings.AllowRunningInsecureContent, True)
+            
+            # Additional settings for Raspberry Pi
+            if self.is_raspberry_pi:
+                settings.setAttribute(QWebEngineSettings.Accelerated2dCanvasEnabled, False)
+                settings.setAttribute(QWebEngineSettings.WebGLEnabled, False)
+                settings.setAttribute(QWebEngineSettings.HyperlinkAuditingEnabled, False)
+                settings.setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
+                logging.info("Applied Raspberry Pi specific QtWebEngine settings")
+            
+            logging.info("Configured QtWebEngine settings")
+        else:
+            # WebKit settings (different attribute names)
+            try:
+                settings.setAttribute(settings.PluginsEnabled, True)
+                settings.setAttribute(settings.JavascriptEnabled, True)
+                settings.setAttribute(settings.LocalStorageEnabled, True)
+                settings.setAttribute(settings.AcceleratedCompositingEnabled, False)  # Disable for Pi
+                if hasattr(settings, 'WebGLEnabled'):
+                    settings.setAttribute(settings.WebGLEnabled, False)
+                logging.info("Configured QtWebKit settings with Pi optimizations")
+            except AttributeError as e:
+                logging.warning(f"Some WebKit settings not available: {e}")
         
         # Connect URL change signal
         self.web_view.urlChanged.connect(self.on_url_changed)
@@ -475,22 +446,19 @@ class KioskBrowser(QMainWindow):
         if hasattr(self.web_view, 'loadProgress'):
             self.web_view.loadProgress.connect(self.on_load_progress)
         
-        logging.info("Qt6 WebEngine setup complete with modern compatibility")
+        logging.info("Web view setup complete")
         
     def load_home_page(self):
         """Load the default home page"""
-        if not WEBENGINE_AVAILABLE:
-            return
-            
         # Create a simple HTML home page
         home_html = """
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Office Kiosk - Home (Qt6)</title>
+            <title>Office Kiosk - Home</title>
             <style>
                 body {
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    font-family: Arial, sans-serif;
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     color: white;
                     text-align: center;
@@ -503,40 +471,30 @@ class KioskBrowser(QMainWindow):
                 }
                 h1 {
                     font-size: 3em;
-                    margin-bottom: 20px;
-                    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-                }
-                .version {
-                    font-size: 1.2em;
                     margin-bottom: 30px;
-                    opacity: 0.8;
-                    color: #a8e6cf;
+                    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
                 }
                 .welcome {
                     font-size: 1.5em;
                     margin-bottom: 40px;
                     opacity: 0.9;
                 }
-                .features {
+                .shortcuts-grid {
                     display: grid;
                     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
                     gap: 20px;
                     margin-top: 40px;
                 }
-                .feature-card {
+                .shortcut-card {
                     background: rgba(255,255,255,0.1);
                     border-radius: 15px;
-                    padding: 25px;
+                    padding: 30px;
                     backdrop-filter: blur(10px);
                     border: 1px solid rgba(255,255,255,0.2);
                     transition: transform 0.3s ease;
                 }
-                .feature-card:hover {
+                .shortcut-card:hover {
                     transform: translateY(-5px);
-                }
-                .feature-card h3 {
-                    margin-bottom: 15px;
-                    color: #a8e6cf;
                 }
                 .time {
                     font-size: 2em;
@@ -547,27 +505,22 @@ class KioskBrowser(QMainWindow):
         </head>
         <body>
             <div class="container">
-                <h1>🖥️ OFFICE KIOSK</h1>
-                <div class="version">✨ Powered by Qt6 - Modern Web Support ✨</div>
+                <h1>OFFICE KIOSK</h1>
                 <div class="welcome">Welcome! Use the shortcuts above to navigate to your favorite services.</div>
                 <div class="time" id="current-time"></div>
                 
-                <div class="features">
-                    <div class="feature-card">
-                        <h3>🏠 HOME ASSISTANT</h3>
-                        <p>Control your smart home devices and automations with modern interface support</p>
+                <div class="shortcuts-grid">
+                    <div class="shortcut-card">
+                        <h3>HOME ASSISTANT</h3>
+                        <p>Control your smart home devices and automations</p>
                     </div>
-                    <div class="feature-card">
-                        <h3>🎵 YOUTUBE MUSIC</h3>
-                        <p>Stream music with full YouTube compatibility - no more "outdated browser" errors!</p>
+                    <div class="shortcut-card">
+                        <h3>YOUTUBE MUSIC</h3>
+                        <p>Stream your favorite music and playlists</p>
                     </div>
-                    <div class="feature-card">
-                        <h3>🔍 GOOGLE SEARCH</h3>
-                        <p>Search the web with full modern browser support and enhanced performance</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>📺 YOUTUBE</h3>
-                        <p>Watch videos with improved video codec support and better performance</p>
+                    <div class="shortcut-card">
+                        <h3>GOOGLE</h3>
+                        <p>Search the web and access Google services</p>
                     </div>
                 </div>
             </div>
@@ -593,9 +546,6 @@ class KioskBrowser(QMainWindow):
                 
                 updateTime();
                 setInterval(updateTime, 1000);
-                
-                // Add some Qt6 feature detection
-                console.log('Qt6 Kiosk Browser loaded successfully');
             </script>
         </body>
         </html>
@@ -604,12 +554,7 @@ class KioskBrowser(QMainWindow):
         self.web_view.setHtml(home_html)
         
     def load_url(self, url):
-        """Load a specific URL with Qt6 enhancements"""
-        if not WEBENGINE_AVAILABLE:
-            QMessageBox.warning(self, "WebEngine Not Available", 
-                              "Qt6 WebEngine is not installed. Please install PyQt6-WebEngine.")
-            return
-            
+        """Load a specific URL"""
         try:
             logging.info(f"Attempting to load URL: {url}")
             if not url.startswith(('http://', 'https://')):
@@ -635,7 +580,7 @@ class KioskBrowser(QMainWindow):
     def on_load_started(self):
         """Called when page starts loading"""
         logging.info("Page load started")
-        # Visual feedback via style change
+        # Keep the refresh icon but add visual feedback via style
         self.refresh_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: #f39c12;
@@ -692,6 +637,13 @@ class KioskBrowser(QMainWindow):
                 self.handle_network_error(current_url)
             else:
                 QMessageBox.warning(self, "Load Error", f"Failed to load the page: {current_url}")
+            
+        # Additional debugging: check if it's a network error
+        page = self.web_view.page()
+        if hasattr(page, 'profile'):
+            profile = page.profile()
+            if hasattr(profile, 'httpUserAgent'):
+                logging.info(f"User agent: {profile.httpUserAgent()}")
                 
     def on_load_progress(self, progress):
         """Called during page loading to show progress"""
@@ -731,19 +683,49 @@ Possible solutions:
 3. Check if port 8123 is accessible
 4. Try accessing {url} in a regular browser first
 5. If using HTTPS, try HTTP instead (SSL certificate issues)
+6. For HTTPS with self-signed certificates, try adding --ignore-certificate-errors
 
-Qt6 WebEngine provides better SSL/TLS support than Qt5.
+Would you like to try a different URL?
             """
             QMessageBox.warning(self, "Home Assistant Connection Error", error_msg)
         else:
             QMessageBox.warning(self, "Network Error", f"Failed to connect to {url}")
             
+    def test_home_assistant_connection(self):
+        """Test if Home Assistant is accessible"""
+        import socket
+        try:
+            # Try to resolve homeassistant.local
+            host = "homeassistant.local"
+            port = 8123
+            socket.getaddrinfo(host, port)
+            logging.info(f"DNS resolution successful for {host}")
+            
+            # Try to connect to the port
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            result = sock.connect_ex((host, port))
+            sock.close()
+            
+            if result == 0:
+                logging.info(f"Port {port} is open on {host}")
+                return True
+            else:
+                logging.warning(f"Port {port} is not accessible on {host}")
+                return False
+                
+        except Exception as e:
+            logging.error(f"Connection test failed: {e}")
+            return False
+            
     def toggle_fullscreen(self):
         """Toggle between fullscreen and windowed mode"""
         if self.isFullScreen():
             self.showNormal()
+            # Button text stays the same since it's just an icon
         else:
             self.showFullScreen()
+            # Button text stays the same since it's just an icon
             
     def shutdown_pi(self):
         """Safely shutdown the Raspberry Pi"""
@@ -755,11 +737,11 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
             self,
             "Shutdown Raspberry Pi",
             "Are you sure you want to shutdown the Raspberry Pi?\n\nThis will turn off the device completely.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
         )
         
-        if reply == QMessageBox.StandardButton.Yes:
+        if reply == QMessageBox.Yes:
             logging.info("User initiated Raspberry Pi shutdown")
             try:
                 # Show a final message
@@ -788,23 +770,21 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
             
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts"""
-        if event.key() == Qt.Key.Key_F11:
+        if event.key() == Qt.Key_F11:
             self.toggle_fullscreen()
-        elif event.key() == Qt.Key.Key_Escape and self.isFullScreen():
+        elif event.key() == Qt.Key_Escape and self.isFullScreen():
             self.showNormal()
-        elif event.key() == Qt.Key.Key_F12:
+            # Button text stays the same since it's just an icon
+        elif event.key() == Qt.Key_F12:
             # Toggle dev tools for debugging
             self.toggle_dev_tools()
-        elif event.modifiers() == Qt.KeyboardModifier.ControlModifier:
-            if event.key() == Qt.Key.Key_R:
+        elif event.modifiers() == Qt.ControlModifier:
+            if event.key() == Qt.Key_R:
                 self.web_view.reload()
         super().keyPressEvent(event)
         
     def toggle_dev_tools(self):
         """Toggle developer tools for debugging"""
-        if not WEBENGINE_AVAILABLE:
-            return
-            
         try:
             page = self.web_view.page()
             if hasattr(page, 'setDevToolsPage'):
@@ -816,52 +796,56 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                 logging.warning("Developer tools not available")
         except Exception as e:
             logging.error(f"Error opening developer tools: {e}")
+            
+    def show_debug_info(self):
+        """Show debug information about the current page"""
+        current_url = self.web_view.url().toString()
+        page_title = self.web_view.page().title()
+        
+        debug_info = f"""
+Debug Information:
+- Current URL: {current_url}
+- Page Title: {page_title}
+- User Agent: {self.web_view.page().profile().httpUserAgent()}
+- Qt Version: {Qt.qVersion()}
+        """
+        
+        logging.info(debug_info)
+        QMessageBox.information(self, "Debug Info", debug_info)
+    
+    def load_icon(self, icon_name):
+        """Load an SVG icon from the icons directory"""
+        icon_path = os.path.join(os.path.dirname(__file__), 'icons', f'{icon_name}.svg')
+        if os.path.exists(icon_path):
+            return QIcon(icon_path)
+        else:
+            logging.warning(f"Icon not found: {icon_path}")
+            return QIcon()  # Return empty icon if file not found
 
 def main():
     """Main function to run the application"""
     # Set Qt application attributes before creating QApplication
-    # Note: In Qt6, high DPI scaling is enabled by default
-    # Many Qt5 attributes are no longer needed or have different names in Qt6
-    try:
-        # These attributes may not exist in Qt6, so we'll try them safely
-        if hasattr(Qt.ApplicationAttribute, 'AA_UseHighDpiPixmaps'):
-            QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
-        if hasattr(Qt.ApplicationAttribute, 'AA_DisableWindowContextHelpButton'):
-            QApplication.setAttribute(Qt.ApplicationAttribute.AA_DisableWindowContextHelpButton, True)
-    except AttributeError:
-        # Qt6 doesn't need these attributes
-        pass
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+    QApplication.setAttribute(Qt.AA_DisableWindowContextHelpButton, True)
     
     # For Raspberry Pi, add specific attributes
     is_rpi = 'raspberry' in os.uname().machine.lower() if hasattr(os, 'uname') else False
     if is_rpi:
-        # Qt6 WebEngine flags for better YouTube compatibility
-        chromium_flags = [
-            '--disable-gpu-sandbox',
-            '--disable-software-rasterizer',
-            '--enable-gpu-rasterization',
-            '--ignore-gpu-blacklist',
-            '--disable-dev-shm-usage',
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--enable-features=VaapiVideoDecoder',
-            '--use-gl=egl',
-            '--enable-accelerated-video-decode',
-            '--enable-accelerated-mjpeg-decode'
-        ]
-        os.environ.setdefault('QTWEBENGINE_CHROMIUM_FLAGS', ' '.join(chromium_flags))
-        logging.info(f"Set Qt6 Chromium flags for Pi: {' '.join(chromium_flags)}")
-    else:
-        # For development/Windows - enable modern features
+        QApplication.setAttribute(Qt.AA_X11InitThreads, True)
+        # Disable GPU blacklist for better WebEngine support
         os.environ.setdefault('QTWEBENGINE_CHROMIUM_FLAGS', 
-            '--enable-features=VaapiVideoDecoder --enable-accelerated-video-decode')
+            '--disable-gpu-sandbox --disable-software-rasterizer --enable-gpu-rasterization --ignore-gpu-blacklist --disable-dev-shm-usage')
     
     app = QApplication(sys.argv)
     
     # Set application properties
-    app.setApplicationName("Office Kiosk Browser Qt6")
-    app.setApplicationVersion("2.0")
+    app.setApplicationName("Office Kiosk Browser")
+    app.setApplicationVersion("1.0")
     app.setOrganizationName("Office Kiosk")
+    
+    # Improve font rendering
+    app.setDesktopSettingsAware(False)
     
     # Create and show the main window
     browser = KioskBrowser()
@@ -883,7 +867,7 @@ def main():
         logging.info("Started in windowed mode")
     
     # Start the application
-    sys.exit(app.exec())
+    sys.exit(app.exec_())
 
 if __name__ == "__main__":
     main()

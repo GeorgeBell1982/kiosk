@@ -3,13 +3,13 @@
 Version information for Office Kiosk Browser
 """
 
-__version__ = "1.0.0"
-__build_date__ = "2025-01-06"
-__description__ = "Office Kiosk Browser - Touchscreen-friendly browser for Raspberry Pi"
+__version__ = "2.0.0"
+__build_date__ = "2025-01-07"
+__description__ = "Office Kiosk Browser Qt6 - Modern touchscreen-friendly browser for Raspberry Pi"
 
 def get_version_string():
     """Get formatted version string"""
-    return f"v{__version__}"
+    return f"v{__version__} Qt6"
 
 def get_full_version_info():
     """Get full version information"""
@@ -17,5 +17,5 @@ def get_full_version_info():
         "version": __version__,
         "build_date": __build_date__,
         "description": __description__,
-        "formatted": f"v{__version__} ({__build_date__})"
+        "formatted": f"v{__version__} Qt6 ({__build_date__})"
     }

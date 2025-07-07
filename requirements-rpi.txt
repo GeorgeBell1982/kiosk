@@ -1,6 +1,9 @@
-# Raspberry Pi specific requirements
-# PyQt5 and PyQtWebEngine should be installed via system packages:
-# sudo apt install python3-pyqt5 python3-pyqt5.qtwebengine
+# Raspberry Pi specific requirements - Qt6 Version
+# PyQt6 and PyQt6-WebEngine should be installed via system packages:
+# sudo apt install python3-pyqt6 python3-pyqt6.qtwebengine
+
+# For newer Raspberry Pi OS versions (Bookworm and later), Qt6 is available
+# For older versions, you may need to build from source or use Qt5 version
 
 # No additional Python packages needed for basic functionality
 # This file exists for compatibility but should remain empty for Raspberry Pi
