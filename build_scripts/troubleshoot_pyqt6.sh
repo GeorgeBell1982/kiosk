@@ -82,6 +82,17 @@ check_python_installations() {
     pip3 list | grep -i pyqt
     echo
     
+    echo "=== VIRTUAL KEYBOARD ==="
+    if command -v wvkbd-mobintl >/dev/null 2>&1; then
+        success "wvkbd virtual keyboard is available"
+        echo "  Location: $(which wvkbd-mobintl)"
+    else
+        warning "wvkbd virtual keyboard not found"
+        echo "  Install with: sudo apt install wvkbd"
+        echo "  Virtual keyboard button will show installation instructions"
+    fi
+    echo
+    
     echo "=== PYTHON PATHS ==="
     python3 -c "import sys; print('\\n'.join(sys.path))"
     echo
@@ -202,6 +213,10 @@ fix_common_issues() {
         python3-pyqt6.qtwebengine \
         python3-pyqt6.qtsvg \
         python3-pyqt6-dev 2>/dev/null || warning "Qt6 packages may not be available on this system"
+    
+    # Try to install virtual keyboard for touchscreen support
+    log "Installing virtual keyboard for touchscreen support..."
+    sudo apt install -y wvkbd 2>/dev/null || warning "wvkbd virtual keyboard not available on this system"
     
     # Fix pip issues
     log "Upgrading pip..."

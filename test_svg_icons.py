@@ -43,7 +43,7 @@ class SVGTestWindow(QMainWindow):
         layout.addLayout(button_layout)
         
         # List of icons to test
-        icons_to_test = ['back', 'forward', 'refresh', 'home', 'homeassistant', 'google', 'youtube']
+        icons_to_test = ['back', 'forward', 'refresh', 'home', 'homeassistant', 'google', 'youtube', 'keyboard']
         
         for icon_name in icons_to_test:
             button = QPushButton(icon_name.title())

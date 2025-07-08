@@ -201,6 +201,7 @@ class KioskBrowser(QMainWindow):
             'youtube': 'YT',
             'music': '♪',
             'fullscreen': '⛶',
+            'keyboard': '⌨',
             'shutdown': '⏻'
         }
         
@@ -368,8 +369,20 @@ class KioskBrowser(QMainWindow):
         nav_bottom_row.addWidget(self.home_btn)
         nav_bottom_row.addWidget(self.fullscreen_btn)
         
-        # Add shutdown button only on Raspberry Pi
+        # Add Pi-specific buttons only on Raspberry Pi
         if self.is_raspberry_pi:
+            # Virtual keyboard toggle button
+            self.keyboard_btn = QPushButton()
+            self.keyboard_btn.setIcon(self.load_icon('keyboard'))
+            self.keyboard_btn.setIconSize(QSize(int(button_width * 0.4), int(button_height * 0.4)))
+            self.keyboard_btn.clicked.connect(self.toggle_virtual_keyboard)
+            self.keyboard_btn.setFixedSize(*button_size)
+            self.keyboard_visible = False  # Track keyboard state
+            self.update_keyboard_button_style()
+            self.keyboard_btn.setToolTip("Toggle Virtual Keyboard")
+            nav_bottom_row.addWidget(self.keyboard_btn)
+            
+            # Shutdown button
             self.shutdown_btn = QPushButton()
             self.shutdown_btn.setIcon(self.load_icon('shutdown'))
             self.shutdown_btn.setIconSize(QSize(int(button_width * 0.4), int(button_height * 0.4)))
@@ -394,7 +407,7 @@ class KioskBrowser(QMainWindow):
             """)
             self.shutdown_btn.setToolTip("Shutdown Raspberry Pi")
             nav_bottom_row.addWidget(self.shutdown_btn)
-            logging.info("Raspberry Pi detected - shutdown button added")
+            logging.info("Raspberry Pi detected - keyboard and shutdown buttons added")
         
         # Add the two rows to the main navigation layout
         nav_controls_layout.addLayout(nav_top_row)
@@ -810,6 +823,101 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
             self.showNormal()
         else:
             self.showFullScreen()
+    
+    def toggle_virtual_keyboard(self):
+        """Toggle the virtual keyboard (wvkbd) on Raspberry Pi"""
+        if not self.is_raspberry_pi:
+            QMessageBox.warning(self, "Not Available", "Virtual keyboard is only available on Raspberry Pi.")
+            return
+        
+        try:
+            if self.keyboard_visible:
+                # Hide keyboard
+                logging.info("Hiding virtual keyboard (wvkbd)")
+                subprocess.run(['pkill', 'wvkbd-mobintl'], check=False)  # Don't fail if already closed
+                self.keyboard_visible = False
+            else:
+                # Show keyboard
+                logging.info("Showing virtual keyboard (wvkbd)")
+                # Start wvkbd in the background with optimal settings for touchscreen
+                subprocess.Popen([
+                    'wvkbd-mobintl',
+                    '--hidden',  # Start hidden, then show
+                    '--landscape',  # Use landscape layout
+                    '--height', '250',  # Set height
+                    '--margin', '5'  # Add margin
+                ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                self.keyboard_visible = True
+            
+            # Update button appearance
+            self.update_keyboard_button_style()
+            
+        except FileNotFoundError:
+            # wvkbd not installed
+            logging.error("wvkbd not found - virtual keyboard not available")
+            QMessageBox.warning(
+                self,
+                "Virtual Keyboard Not Available",
+                "wvkbd (virtual keyboard) is not installed.\n\n"
+                "To install it:\n"
+                "sudo apt update\n"
+                "sudo apt install wvkbd"
+            )
+        except Exception as e:
+            logging.error(f"Error toggling virtual keyboard: {e}")
+            QMessageBox.warning(self, "Keyboard Error", f"Failed to toggle virtual keyboard: {e}")
+    
+    def update_keyboard_button_style(self):
+        """Update the keyboard button style based on current state"""
+        if not hasattr(self, 'keyboard_btn'):
+            return
+        
+        # Get the current font size from the nav buttons
+        font_size = max(14, int(self.height() * 0.06))
+        
+        if self.keyboard_visible:
+            # Keyboard is visible - show as active
+            style = f"""
+                QPushButton {{
+                    background-color: #f39c12;
+                    border: none;
+                    color: white;
+                    font-size: {max(12, int(font_size * 0.9))}px;
+                    font-weight: bold;
+                    border-radius: 8px;
+                    margin: 2px;
+                    border: 2px solid #e67e22;
+                }}
+                QPushButton:hover {{
+                    background-color: #e67e22;
+                }}
+                QPushButton:pressed {{
+                    background-color: #d68910;
+                }}
+            """
+            self.keyboard_btn.setToolTip("Hide Virtual Keyboard")
+        else:
+            # Keyboard is hidden - show as inactive
+            style = f"""
+                QPushButton {{
+                    background-color: #95a5a6;
+                    border: none;
+                    color: white;
+                    font-size: {max(12, int(font_size * 0.9))}px;
+                    font-weight: bold;
+                    border-radius: 8px;
+                    margin: 2px;
+                }}
+                QPushButton:hover {{
+                    background-color: #7f8c8d;
+                }}
+                QPushButton:pressed {{
+                    background-color: #6c7b7d;
+                }}
+            """
+            self.keyboard_btn.setToolTip("Show Virtual Keyboard")
+        
+        self.keyboard_btn.setStyleSheet(style)
             
     def shutdown_pi(self):
         """Safely shutdown the Raspberry Pi"""
@@ -865,6 +973,19 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
             if event.key() == Qt.Key.Key_R:
                 self.web_view.reload()
         super().keyPressEvent(event)
+    
+    def closeEvent(self, event):
+        """Clean up when the application is closing"""
+        if self.is_raspberry_pi and hasattr(self, 'keyboard_visible') and self.keyboard_visible:
+            # Hide virtual keyboard when closing
+            logging.info("Hiding virtual keyboard on application close")
+            try:
+                subprocess.run(['pkill', 'wvkbd-mobintl'], check=False)
+            except Exception as e:
+                logging.warning(f"Could not hide virtual keyboard on close: {e}")
+        
+        # Call parent closeEvent to ensure proper cleanup
+        super().closeEvent(event)
         
     def toggle_dev_tools(self):
         """Toggle developer tools for debugging"""

@@ -74,6 +74,10 @@ try_system_packages() {
     # Also install essential build dependencies in case we need them later
     sudo DEBIAN_FRONTEND=noninteractive apt install -y build-essential python3-dev python3-pip
     
+    # Install virtual keyboard for touchscreen use
+    log "Installing virtual keyboard (wvkbd) for touchscreen support..."
+    sudo DEBIAN_FRONTEND=noninteractive apt install -y wvkbd || warning "wvkbd not available - virtual keyboard button will show installation instructions"
+    
     if sudo DEBIAN_FRONTEND=noninteractive apt install -y python3-pyqt6 python3-pyqt6.qtwebengine python3-pyqt6.qtsvg python3-pyqt6-dev; then
         success "Qt6 system packages installed"
         if test_pyqt6; then
