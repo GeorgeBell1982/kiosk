@@ -1,9 +1,12 @@
 # Raspberry Pi specific requirements - Qt6 Version
-# PyQt6 and PyQt6-WebEngine should be installed via system packages:
-# sudo apt install python3-pyqt6 python3-pyqt6.qtwebengine
+# PyQt6 and related modules should be installed via system packages:
+# sudo apt install python3-pyqt6 python3-pyqt6.qtwebengine python3-pyqt6.qtsvg
 
 # For newer Raspberry Pi OS versions (Bookworm and later), Qt6 is available
 # For older versions, you may need to build from source or use Qt5 version
+
+# SVG support is essential for icons - install via:
+# sudo apt install python3-pyqt6.qtsvg
 
 # No additional Python packages needed for basic functionality
 # This file exists for compatibility but should remain empty for Raspberry Pi

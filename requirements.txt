@@ -2,8 +2,9 @@
 # Note: On Raspberry Pi, PyQt6 should be installed via system packages when available
 # These are fallback requirements for other systems or when system packages aren't available
 
-# For Raspberry Pi, use: sudo apt install python3-pyqt6 python3-pyqt6.qtwebengine
+# For Raspberry Pi, use: sudo apt install python3-pyqt6 python3-pyqt6.qtwebengine python3-pyqt6.qtsvg
 # If WebEngine is not available, the app will fall back to WebKit or pip installation
 # For other systems, pip will install these versions
 PyQt6>=6.6.0
 PyQt6-WebEngine>=6.6.0
+PyQt6-Svg>=6.6.0

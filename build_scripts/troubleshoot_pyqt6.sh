@@ -195,6 +195,14 @@ fix_common_issues() {
         libxkbcommon-dev \
         libxkbcommon-x11-dev 2>/dev/null || warning "Some dependencies may not be available"
     
+    # Try to install Qt6 packages if missing
+    log "Checking for missing Qt6 packages..."
+    sudo apt install -y \
+        python3-pyqt6 \
+        python3-pyqt6.qtwebengine \
+        python3-pyqt6.qtsvg \
+        python3-pyqt6-dev 2>/dev/null || warning "Qt6 packages may not be available on this system"
+    
     # Fix pip issues
     log "Upgrading pip..."
     python3 -m pip install --upgrade pip setuptools wheel
@@ -234,6 +242,14 @@ def test_imports():
         results['PyQt6_WebEngine'] = 'OK'
     except ImportError as e:
         results['PyQt6_WebEngine'] = f'FAILED: {e}'
+    
+    # Test SVG support
+    try:
+        from PyQt6.QtSvg import QSvgRenderer
+        from PyQt6.QtSvgWidgets import QSvgWidget
+        results['PyQt6_SVG'] = 'OK'
+    except ImportError as e:
+        results['PyQt6_SVG'] = f'FAILED: {e}'
     
     # Test basic functionality
     try:

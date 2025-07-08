@@ -42,7 +42,19 @@ except ImportError:
         pass
 
 from PyQt6.QtCore import QUrl, Qt, QSize
-from PyQt6.QtGui import QFont, QIcon
+from PyQt6.QtGui import QFont, QIcon, QPixmap, QPainter
+from PyQt6.QtSvgWidgets import QSvgWidget
+
+# Try to import SVG support for Qt6
+try:
+    from PyQt6.QtSvg import QSvgRenderer
+    SVG_AVAILABLE = True
+    logging.info("Qt6 SVG support available")
+except ImportError:
+    logging.warning("Qt6 SVG support not available - SVG icons may not display")
+    SVG_AVAILABLE = False
+    QSvgRenderer = None
+
 from version import get_version_string, get_full_version_info
 
 # Set up logging
@@ -136,13 +148,67 @@ class KioskBrowser(QMainWindow):
         """)
         
     def load_icon(self, icon_name):
-        """Load an SVG icon from the icons directory"""
+        """Load an SVG icon from the icons directory with Qt6 SVG support"""
         icon_path = os.path.join(os.path.dirname(__file__), 'icons', f'{icon_name}.svg')
         if os.path.exists(icon_path):
-            return QIcon(icon_path)
+            if SVG_AVAILABLE:
+                # Use SVG renderer to create a pixmap for the icon
+                renderer = QSvgRenderer(icon_path)
+                if renderer.isValid():
+                    # Create a pixmap to render the SVG into
+                    pixmap = QPixmap(64, 64)  # Standard icon size
+                    pixmap.fill(Qt.GlobalColor.transparent)
+                    
+                    painter = QPainter(pixmap)
+                    renderer.render(painter)
+                    painter.end()
+                    
+                    return QIcon(pixmap)
+                else:
+                    logging.warning(f"Invalid SVG file: {icon_path}")
+                    return self.create_fallback_icon(icon_name)
+            else:
+                # Fallback: try direct QIcon loading (may not work for SVG in Qt6)
+                icon = QIcon(icon_path)
+                if icon.isNull():
+                    logging.warning(f"SVG icon could not be loaded (Qt6 SVG not available): {icon_path}")
+                    return self.create_fallback_icon(icon_name)
+                return icon
         else:
             logging.warning(f"Icon not found: {icon_path}")
-            return QIcon()  # Return empty icon if file not found
+            return self.create_fallback_icon(icon_name)
+    
+    def create_fallback_icon(self, icon_name):
+        """Create a simple text-based fallback icon when SVG is not available"""
+        pixmap = QPixmap(64, 64)
+        pixmap.fill(Qt.GlobalColor.white)
+        
+        painter = QPainter(pixmap)
+        painter.setPen(Qt.GlobalColor.black)
+        font = QFont()
+        font.setPixelSize(12)
+        font.setBold(True)
+        painter.setFont(font)
+        
+        # Map icon names to simple text fallbacks
+        fallback_text = {
+            'back': '←',
+            'forward': '→',
+            'refresh': '↻',
+            'home': '🏠',
+            'homeassistant': 'HA',
+            'google': 'G',
+            'youtube': 'YT',
+            'music': '♪',
+            'fullscreen': '⛶',
+            'shutdown': '⏻'
+        }
+        
+        text = fallback_text.get(icon_name, icon_name[:2].upper())
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, text)
+        painter.end()
+        
+        return QIcon(pixmap)
         
     def create_control_panel(self, main_layout):
         """Create the control panel with controls on left and shortcuts on right"""
