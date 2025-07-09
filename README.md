@@ -73,6 +73,16 @@ python3 tests/test_svg_icons.py
 - **Qt6 not found**: Use `./install/quick_install_pyqt6.sh`
 - **SVG icons missing**: Install `python3-pyqt6.qtsvg`
 - **Virtual keyboard**: Install `wvkbd` package
+- **Multiple browser windows**: See [Multiple Instances Troubleshooting](docs/TROUBLESHOOTING_MULTIPLE_INSTANCES.md)
+
+**Multiple Instances Issue:**
+If you see multiple browser windows opening:
+```bash
+./install/trace_autostart.sh        # Quick diagnosis
+./install/manage_autostart.sh stop   # Stop all instances
+./install/manage_autostart.sh disable # Remove all autostart
+./install/manage_autostart.sh enable  # Set up clean autostart
+```
 
 ## 🔧 Requirements
 
