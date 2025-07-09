@@ -48,10 +48,10 @@ echo "  Starting wvkbd-mobintl with basic settings..."
 # Detect Wayland vs X11
 if [ -n "$WAYLAND_DISPLAY" ] || [ "$XDG_SESSION_TYPE" = "wayland" ]; then
     echo "  📡 Wayland detected - using Wayland-optimized settings"
-    wvkbd-mobintl -L --height 300 --margin 10 --bg 333333cc --fg ffffff --alpha 0.9 &
+    wvkbd-mobintl -L -H 300 --bg 333333cc --fg ffffff &
 else
     echo "  🖥️  X11 detected - using X11 settings"
-    wvkbd-mobintl -L --height 280 --margin 5 --fg white --layer overlay &
+    wvkbd-mobintl -L -H 280 --fg white &
 fi
 
 KEYBOARD_PID=$!
@@ -77,7 +77,8 @@ echo
 
 echo "🎯 Manual test commands:"
 echo "  Basic test:     wvkbd-mobintl -L"
-echo "  Wayland test:   wvkbd-mobintl -L --height 300 --bg 333333cc --fg ffffff"
+echo "  With height:    wvkbd-mobintl -L -H 300"
+echo "  Wayland test:   wvkbd-mobintl -L -H 300 --bg 333333cc --fg ffffff"
 echo "  Kill keyboard:  pkill wvkbd-mobintl"
 echo
 

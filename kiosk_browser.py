@@ -894,23 +894,19 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                     # Wayland-optimized command
                     cmd = [
                         'wvkbd-mobintl',
-                        '-L',  # Landscape mode (correct flag)
-                        '--height', '300',
-                        '--margin', '10',
+                        '-L',  # Landscape mode
+                        '-H', '300',  # Height (correct flag)
                         '--bg', '333333cc',  # Semi-transparent dark background
-                        '--fg', 'ffffff',    # White text
-                        '--alpha', '0.9'     # Slight transparency
+                        '--fg', 'ffffff'     # White text
                     ]
                     logging.info("Using Wayland-optimized wvkbd settings")
                 else:
                     # X11 fallback
                     cmd = [
                         'wvkbd-mobintl',
-                        '-L',  # Landscape mode (correct flag)
-                        '--height', '280',
-                        '--margin', '5',
-                        '--fg', 'white',
-                        '--layer', 'overlay'
+                        '-L',  # Landscape mode
+                        '-H', '280',  # Height (correct flag)
+                        '--fg', 'white'
                     ]
                     logging.info("Using X11 wvkbd settings")
                 

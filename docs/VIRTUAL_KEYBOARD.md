@@ -61,7 +61,7 @@ If the virtual keyboard doesn't appear when clicked:
 
 2. **Manually test keyboard**:
    ```bash
-   wvkbd-mobintl -L --height 280
+   wvkbd-mobintl -L -H 280
    ```
 
 3. **Check window manager compatibility**:
@@ -79,8 +79,8 @@ If the virtual keyboard doesn't appear when clicked:
    # Kill any existing keyboard
    pkill wvkbd-mobintl
    
-   # Start with explicit layer settings
-   wvkbd-mobintl -L --height 280 --layer overlay
+   # Start with basic settings
+   wvkbd-mobintl -L -H 280
    ```
 
 ### Button Icons Too Large
@@ -92,10 +92,10 @@ If navigation button icons appear too large:
 ## Configuration
 
 The keyboard is configured with optimal settings for the kiosk browser:
-- Height: 280 pixels (updated)
+- Height: 280-300 pixels (Wayland uses 300px, X11 uses 280px)  
 - Layout: Mobile international (mobintl)
-- Position: Bottom of screen
-- Margins: 5 pixels
-- Layer: Overlay (for better visibility)
+- Landscape mode: `-L` flag for proper orientation
+- Colors: Semi-transparent background on Wayland for better visibility
+- Command flags: `-H` for height (not `--height`)
 
 These settings can be adjusted in the `toggle_virtual_keyboard()` method in `kiosk_browser.py`.
