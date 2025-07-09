@@ -50,7 +50,8 @@ pip3 install PyQt6 PyQt6-WebEngine PyQt6-Svg
 
 **Quick Shortcuts:**
 - Home Assistant dashboard
-- YouTube Music
+- YouTube Music  
+- Radio Browser (online radio directory)
 - Google Search
 - YouTube
 
@@ -116,6 +117,7 @@ enable_developer_tools = false
 [SHORTCUTS]
 homeassistant_url = http://homeassistant.local:8123
 youtube_music_url = https://music.youtube.com
+radio_browser_url = https://www.radio-browser.info
 google_url = https://www.google.com
 youtube_url = https://www.youtube.com
 ```

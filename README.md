@@ -21,6 +21,7 @@ python3 kiosk_browser.py
 ## ✨ Features
 
 - **Modern Web Browser**: Full Qt6 WebEngine with YouTube, social media support
+- **Quick Access Shortcuts**: Home Assistant, YouTube Music, Radio Browser, Google, YouTube
 - **Touchscreen Optimized**: Large buttons, virtual keyboard, gesture support
 - **Raspberry Pi Ready**: Auto-detects Pi hardware, optimized for 1024x600 displays
 - **Kiosk Mode**: Fullscreen interface with quick shortcuts to common sites

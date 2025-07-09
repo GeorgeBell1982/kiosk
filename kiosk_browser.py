@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Office Kiosk Browser Application - Qt6 Version
-A touchscreen-friendly browser with shortcuts for Home Assistant, YouTube Music, and Google.
+A touchscreen-friendly browser with shortcuts for Home Assistant, YouTube Music, Radio Browser, and Google.
 Designed for Raspberry Pi but works on Windows for testing.
 Upgraded to Qt6 for better modern web compatibility.
 """
@@ -200,6 +200,7 @@ class KioskBrowser(QMainWindow):
             'google': 'G',
             'youtube': 'YT',
             'music': '♪',
+            'radio': '📻',
             'fullscreen': '⛶',
             'keyboard': '⌨',
             'shutdown': '⏻'
@@ -435,17 +436,18 @@ class KioskBrowser(QMainWindow):
         shortcuts_top_row.setSpacing(10)
         shortcuts_bottom_row.setSpacing(10)
         
-        # Define shortcuts with their URLs and icon names - arranged for 2x2 grid
+        # Define shortcuts with their URLs and icon names - arranged for 3x2 grid
         shortcuts = [
             ("HOME ASST", "http://homeassistant.local:8123", "#e74c3c", "homeassistant"),
             ("YT MUSIC", "https://music.youtube.com", "#e67e22", "music"),
+            ("RADIO", "https://www.radio-browser.info", "#9b59b6", "radio"),
             ("GOOGLE", "https://www.google.com", "#27ae60", "google"),
             ("YOUTUBE", "https://www.youtube.com", "#c0392b", "youtube")
         ]
         
-        # Calculate shortcut button dimensions for 2x2 grid
+        # Calculate shortcut button dimensions for 3x2 grid
         shortcuts_width = int(window_width * 0.35)  # Available width for shortcuts
-        shortcut_button_width = int((shortcuts_width - 30) / 2)  # 2 buttons per row, account for margins
+        shortcut_button_width = int((shortcuts_width - 40) / 3)  # 3 buttons per top row, account for margins
         shortcut_button_height = int((nav_height - 30) / 2)  # Same height as nav section, 2 rows
         shortcut_font_size = max(8, int(control_height * 0.06))  # Smaller font for icon+text buttons
         
@@ -478,8 +480,8 @@ class KioskBrowser(QMainWindow):
             btn.clicked.connect(lambda checked, u=url: self.load_url(u))
             btn.setToolTip(f"Open {name}")
             
-            # Add to appropriate row (0,1 = top row, 2,3 = bottom row)
-            if i < 2:
+            # Add to appropriate row (0,1,2 = top row, 3,4 = bottom row)
+            if i < 3:
                 shortcuts_top_row.addWidget(btn)
             else:
                 shortcuts_bottom_row.addWidget(btn)
