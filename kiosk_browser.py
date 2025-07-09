@@ -91,6 +91,8 @@ class KioskBrowser(QMainWindow):
         if self.is_raspberry_pi:
             # For Raspberry Pi with 1024x600 touchscreen - fit exactly
             self.setGeometry(0, 0, 1024, 600)
+            # Debug keyboard environment on Pi
+            self.debug_keyboard_environment()
         else:
             # For development on Windows - use smaller size to match Pi resolution
             self.setGeometry(100, 100, 1024, 600)
@@ -864,6 +866,12 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
             return
         
         try:
+            # Check if wvkbd is installed first
+            result = subprocess.run(['which', 'wvkbd-mobintl'], capture_output=True, text=True)
+            if result.returncode != 0:
+                self.show_keyboard_install_dialog()
+                return
+            
             # Check if keyboard is actually running
             result = subprocess.run(['pgrep', 'wvkbd-mobintl'], capture_output=True, text=True)
             keyboard_running = result.returncode == 0
@@ -874,20 +882,44 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                 subprocess.run(['pkill', 'wvkbd-mobintl'], check=False)
                 self.keyboard_visible = False
             else:
-                # Show keyboard
-                logging.info("Showing virtual keyboard (wvkbd)")
-                # Start wvkbd with settings that ensure it's visible and on top
-                subprocess.Popen([
-                    'wvkbd-mobintl',
-                    '--landscape',  # Use landscape layout
-                    '--height', '280',  # Set height
-                    '--margin', '5',  # Add margin
-                    '--fg', 'white',  # White text
-                    '--layer', 'overlay'  # Try to appear as overlay
-                ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                # Show keyboard - try different methods for Wayland compatibility
+                logging.info("Showing virtual keyboard (wvkbd) on Wayland")
                 
-                # Small delay to allow keyboard to start, then try to ensure it's visible
-                QTimer.singleShot(200, lambda: self.ensure_keyboard_visible())
+                # Detect if we're on Wayland
+                wayland_display = os.environ.get('WAYLAND_DISPLAY')
+                xdg_session_type = os.environ.get('XDG_SESSION_TYPE', '').lower()
+                is_wayland = wayland_display or xdg_session_type == 'wayland'
+                
+                if is_wayland:
+                    # Wayland-optimized command
+                    cmd = [
+                        'wvkbd-mobintl',
+                        '--landscape',
+                        '--height', '300',
+                        '--margin', '10',
+                        '--bg', '333333cc',  # Semi-transparent dark background
+                        '--fg', 'ffffff',    # White text
+                        '--alpha', '0.9'     # Slight transparency
+                    ]
+                    logging.info("Using Wayland-optimized wvkbd settings")
+                else:
+                    # X11 fallback
+                    cmd = [
+                        'wvkbd-mobintl',
+                        '--landscape',
+                        '--height', '280',
+                        '--margin', '5',
+                        '--fg', 'white',
+                        '--layer', 'overlay'
+                    ]
+                    logging.info("Using X11 wvkbd settings")
+                
+                # Start keyboard process
+                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                
+                # Give it a moment to start and check if it's actually running
+                QTimer.singleShot(500, lambda: self.verify_keyboard_started(process))
+                self.keyboard_visible = True
                 self.keyboard_visible = True
             
             # Update button appearance
@@ -908,16 +940,109 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
             logging.error(f"Error toggling virtual keyboard: {e}")
             QMessageBox.warning(self, "Keyboard Error", f"Failed to toggle virtual keyboard: {e}")
     
+    def show_keyboard_install_dialog(self):
+        """Show dialog with instructions to install wvkbd"""
+        QMessageBox.information(
+            self,
+            "Virtual Keyboard Not Installed",
+            "wvkbd (virtual keyboard) is not installed.\n\n"
+            "To install it:\n"
+            "sudo apt update\n"
+            "sudo apt install wvkbd\n\n"
+            "Or run the quick install script:\n"
+            "./install/quick_install_pyqt6.sh"
+        )
+    
+    def verify_keyboard_started(self, process):
+        """Verify that the keyboard process started successfully"""
+        try:
+            # Check if process is still running
+            if process.poll() is None:
+                # Process is running, check if we can find it
+                result = subprocess.run(['pgrep', 'wvkbd-mobintl'], capture_output=True, text=True)
+                if result.returncode == 0:
+                    logging.info("Virtual keyboard started successfully")
+                    self.ensure_keyboard_visible()
+                else:
+                    logging.warning("Keyboard process started but not found in process list")
+                    self.keyboard_visible = False
+            else:
+                # Process died, check stderr for errors
+                _, stderr = process.communicate()
+                error_msg = stderr.decode() if stderr else "Unknown error"
+                logging.error(f"Keyboard process failed to start: {error_msg}")
+                self.keyboard_visible = False
+                
+                # Show user-friendly error message
+                QMessageBox.warning(
+                    self,
+                    "Keyboard Failed to Start",
+                    f"The virtual keyboard failed to start.\n\n"
+                    f"This may be because:\n"
+                    f"• Wayland compositor doesn't support virtual keyboards\n"
+                    f"• wvkbd needs additional permissions\n"
+                    f"• Display server issues\n\n"
+                    f"Try running manually: wvkbd-mobintl --landscape"
+                )
+        except Exception as e:
+            logging.error(f"Error verifying keyboard start: {e}")
+            self.keyboard_visible = False
+        
+        # Update button style regardless
+        self.update_keyboard_button_style()
+    
     def ensure_keyboard_visible(self):
         """Ensure the virtual keyboard is visible and on top"""
         try:
-            # Try to raise/focus the keyboard window
-            subprocess.run(['wmctrl', '-a', 'wvkbd'], check=False)
-        except FileNotFoundError:
-            # wmctrl not available, that's okay
-            pass
+            # On Wayland, window management is handled by the compositor
+            wayland_display = os.environ.get('WAYLAND_DISPLAY')
+            xdg_session_type = os.environ.get('XDG_SESSION_TYPE', '').lower()
+            is_wayland = wayland_display or xdg_session_type == 'wayland'
+            
+            if is_wayland:
+                # On Wayland, we can't directly manipulate windows, but we can try some tricks
+                logging.info("Wayland detected - keyboard window management handled by compositor")
+                # Give focus back to browser after keyboard starts
+                self.activateWindow()
+                self.raise_()
+            else:
+                # On X11, try traditional window management
+                try:
+                    subprocess.run(['wmctrl', '-a', 'wvkbd'], check=False)
+                except FileNotFoundError:
+                    # wmctrl not available, that's okay
+                    pass
         except Exception as e:
-            logging.debug(f"Could not raise keyboard window: {e}")
+            logging.debug(f"Could not manage keyboard window: {e}")
+    
+    def debug_keyboard_environment(self):
+        """Debug information about keyboard environment"""
+        logging.info("=== Keyboard Environment Debug ===")
+        logging.info(f"XDG_SESSION_TYPE: {os.environ.get('XDG_SESSION_TYPE', 'not set')}")
+        logging.info(f"WAYLAND_DISPLAY: {os.environ.get('WAYLAND_DISPLAY', 'not set')}")
+        logging.info(f"DISPLAY: {os.environ.get('DISPLAY', 'not set')}")
+        
+        # Check if wvkbd is available
+        result = subprocess.run(['which', 'wvkbd-mobintl'], capture_output=True, text=True)
+        if result.returncode == 0:
+            logging.info(f"wvkbd-mobintl found at: {result.stdout.strip()}")
+            
+            # Try to get version info
+            version_result = subprocess.run(['wvkbd-mobintl', '--help'], capture_output=True, text=True)
+            if version_result.returncode == 0:
+                logging.info("wvkbd help output available")
+            else:
+                logging.warning("Could not get wvkbd help/version")
+        else:
+            logging.error("wvkbd-mobintl not found in PATH")
+        
+        # Check for alternative keyboards
+        for kb in ['onboard', 'florence', 'squeekboard']:
+            result = subprocess.run(['which', kb], capture_output=True, text=True)
+            if result.returncode == 0:
+                logging.info(f"Alternative keyboard found: {kb}")
+        
+        logging.info("=== End Keyboard Debug ===")
     
     def update_keyboard_button_style(self):
         """Update the keyboard button style based on current state"""

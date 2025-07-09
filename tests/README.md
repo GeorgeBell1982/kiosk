@@ -28,6 +28,22 @@ python3 test_svg_icons.py
 - Demonstrates fallback behavior
 - GUI test window with all icons
 
+### `test_virtual_keyboard.sh`
+Tests virtual keyboard (wvkbd) functionality on Raspberry Pi.
+```bash
+./test_virtual_keyboard.sh
+```
+
+**Features:**
+- Environment detection (Wayland vs X11)
+- wvkbd installation check and auto-install
+- Process management testing
+- Wayland-optimized settings test
+- Manual test command suggestions
+- Troubleshooting guidance
+
+**Raspberry Pi Only** - This test is designed for Pi hardware with touchscreen support.
+
 ## Usage
 
 Run tests after installation to verify everything works:
