@@ -48,13 +48,38 @@ echo "  Starting wvkbd-mobintl with basic settings..."
 # Detect Wayland vs X11
 if [ -n "$WAYLAND_DISPLAY" ] || [ "$XDG_SESSION_TYPE" = "wayland" ]; then
     echo "  📡 Wayland detected - using Wayland-optimized settings"
-    wvkbd-mobintl -L -H 300 --bg 333333cc --fg ffffff &
+    echo "  📋 Testing with overlay layer for fullscreen compatibility..."
+    wvkbd-mobintl -L 300 --bg 333333cc --fg ffffff --layer overlay &
+    KEYBOARD_PID=$!
+    sleep 1
+    
+    # Check if it started, if not try without overlay layer
+    if ! pgrep wvkbd-mobintl >/dev/null; then
+        echo "  ⚠️  Overlay layer failed, trying without layer option..."
+        wvkbd-mobintl -L 300 --bg 333333cc --fg ffffff &
+        KEYBOARD_PID=$!
+        sleep 1
+        
+        # If still failed, try basic command
+        if ! pgrep wvkbd-mobintl >/dev/null; then
+            echo "  ⚠️  Landscape mode failed, trying basic mode..."
+            wvkbd-mobintl &
+            KEYBOARD_PID=$!
+        fi
+    fi
 else
     echo "  🖥️  X11 detected - using X11 settings"
-    wvkbd-mobintl -L -H 280 --fg white &
+    wvkbd-mobintl -L 280 --fg white &
+    KEYBOARD_PID=$!
+    sleep 1
+    
+    # Check if it started, if not try basic command
+    if ! pgrep wvkbd-mobintl >/dev/null; then
+        echo "  ⚠️  Landscape mode failed, trying basic mode..."
+        wvkbd-mobintl &
+        KEYBOARD_PID=$!
+    fi
 fi
-
-KEYBOARD_PID=$!
 sleep 1
 
 # Check if keyboard started
@@ -76,9 +101,9 @@ fi
 echo
 
 echo "🎯 Manual test commands:"
-echo "  Basic test:     wvkbd-mobintl -L"
-echo "  With height:    wvkbd-mobintl -L -H 300"
-echo "  Wayland test:   wvkbd-mobintl -L -H 300 --bg 333333cc --fg ffffff"
+echo "  Basic test:     wvkbd-mobintl"
+echo "  Landscape:      wvkbd-mobintl -L 300"
+echo "  Wayland test:   wvkbd-mobintl -L 300 --bg 333333cc --fg ffffff"
 echo "  Kill keyboard:  pkill wvkbd-mobintl"
 echo
 

@@ -71,6 +71,8 @@ class KioskBrowser(QMainWindow):
         
         self.web_view = None  # Initialize early
         self.is_raspberry_pi = self.detect_raspberry_pi()
+        self.keyboard_visible = False  # Track virtual keyboard state
+        self.keyboard_temp_windowed = False  # Track if we temporarily exited fullscreen for keyboard
         self.setup_ui()
         self.setup_web_view()
         self.load_home_page()
@@ -882,6 +884,12 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                 logging.info("Hiding virtual keyboard (wvkbd)")
                 subprocess.run(['pkill', 'wvkbd-mobintl'], check=False)
                 self.keyboard_visible = False
+                
+                # Restore fullscreen if we temporarily exited for keyboard visibility
+                if self.keyboard_temp_windowed:
+                    logging.info("Restoring fullscreen mode after hiding keyboard")
+                    self.showFullScreen()
+                    self.keyboard_temp_windowed = False
             else:
                 # Show keyboard - try different methods for Wayland compatibility
                 logging.info("Showing virtual keyboard (wvkbd) on Wayland")
@@ -892,14 +900,15 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                 is_wayland = wayland_display or xdg_session_type == 'wayland'
                 
                 if is_wayland:
-                    # Wayland-optimized command
+                    # Wayland-optimized command with overlay layer to appear above fullscreen apps
                     cmd = [
                         'wvkbd-mobintl',
                         '-L', '300',  # Landscape mode with height
                         '--bg', '333333cc',  # Semi-transparent dark background
-                        '--fg', 'ffffff'     # White text
+                        '--fg', 'ffffff',     # White text
+                        '--layer', 'overlay'  # Use overlay layer to appear above fullscreen apps
                     ]
-                    logging.info("Using Wayland-optimized wvkbd settings")
+                    logging.info("Using Wayland-optimized wvkbd settings with overlay layer")
                 else:
                     # X11 fallback
                     cmd = [
@@ -920,14 +929,25 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                         logging.warning("Landscape mode failed, trying basic wvkbd")
                         process = subprocess.Popen(['wvkbd-mobintl'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                         
+                        # If we're in fullscreen and keyboard fails to overlay, temporarily exit fullscreen
+                        if self.isFullScreen():
+                            logging.info("Temporarily exiting fullscreen for virtual keyboard visibility")
+                            self.showNormal()
+                            self.keyboard_temp_windowed = True
+                        
                 except Exception as e:
                     logging.error(f"Failed to start wvkbd: {e}")
                     # Try absolute basic fallback
                     process = subprocess.Popen(['wvkbd-mobintl'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    
+                    # If we're in fullscreen, temporarily exit for keyboard visibility
+                    if self.isFullScreen():
+                        logging.info("Temporarily exiting fullscreen for virtual keyboard visibility")
+                        self.showNormal()
+                        self.keyboard_temp_windowed = True
                 
                 # Give it a moment to start and check if it's actually running
                 QTimer.singleShot(500, lambda: self.verify_keyboard_started(process))
-                self.keyboard_visible = True
                 self.keyboard_visible = True
             
             # Update button appearance

@@ -61,20 +61,31 @@ If the virtual keyboard doesn't appear when clicked:
 
 2. **Manually test keyboard**:
    ```bash
-   wvkbd-mobintl -L -H 280
+   # Try with overlay layer for Wayland (better fullscreen support)
+   wvkbd-mobintl -L 300 --layer overlay
+   
+   # Fallback for older wvkbd versions
+   wvkbd-mobintl -L 300
    ```
 
-3. **Check window manager compatibility**:
+3. **Fullscreen Application Issues**:
+   - **Problem**: Keyboard appears behind fullscreen browser
+   - **Solutions**:
+     - The app automatically detects this and temporarily exits fullscreen
+     - Use `--layer overlay` flag for better Wayland compatibility
+     - Update wvkbd to latest version for best layer support
+
+4. **Check window manager compatibility**:
    - The keyboard works best with Wayland compositors
    - On X11, you may need additional window manager tools like `wmctrl`
    - Install wmctrl for better window management: `sudo apt install wmctrl`
 
-4. **If keyboard appears behind browser**:
-   - The browser automatically tries to raise the keyboard window
+5. **If keyboard still appears behind browser**:
+   - Click the fullscreen toggle button (⛶) to exit fullscreen temporarily
    - Try clicking in a text field first, then toggle the keyboard
    - Switch to a different virtual terminal and back: `Ctrl+Alt+F2`, then `Ctrl+Alt+F7`
 
-5. **Alternative keyboard activation**:
+6. **Alternative keyboard activation**:
    ```bash
    # Kill any existing keyboard
    pkill wvkbd-mobintl
