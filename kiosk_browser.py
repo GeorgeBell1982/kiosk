@@ -273,11 +273,21 @@ class KioskBrowser(QMainWindow):
         # Create top and bottom rows for navigation buttons
         nav_top_row = QHBoxLayout()
         nav_bottom_row = QHBoxLayout()
-        nav_top_row.setSpacing(10)
-        nav_bottom_row.setSpacing(10)
+        
+        # Adjust spacing based on platform
+        if self.is_raspberry_pi:
+            nav_top_row.setSpacing(5)  # Reduced spacing for Pi
+            nav_bottom_row.setSpacing(5)
+        else:
+            nav_top_row.setSpacing(10)  # Standard spacing
+            nav_bottom_row.setSpacing(10)
         
         # Navigation buttons - consistent sizing with proportional fonts for 2-row layout
-        font_size = max(14, int(control_height * 0.06))  # Adjusted font size for 2-row buttons
+        if self.is_raspberry_pi:
+            font_size = max(10, int(control_height * 0.04))  # Smaller font for Pi's compact layout
+        else:
+            font_size = max(14, int(control_height * 0.06))  # Standard font size
+            
         nav_button_style = f"""
             QPushButton {{
                 background-color: #3498db;
@@ -301,14 +311,35 @@ class KioskBrowser(QMainWindow):
         """
         
         # Create navigation buttons with proportional size for 2-row layout
-        # Button size based on available space in 2 rows
-        button_width = int((nav_controls_group.width() - 40) / 3)  # 3 buttons per row, account for margins
-        button_height = int((nav_height - 20) / 2)  # 2 rows, account for margins and spacing
+        # Button size based on available space in 2 rows - Pi optimized
+        nav_available_width = int(window_width * nav_width_percent) - 20  # Account for margins
+        
+        if self.is_raspberry_pi:
+            # Smaller buttons for Pi's compact screen (typically 1024x600)
+            button_width = min(80, int(nav_available_width / 3.2))  # Slightly more space between buttons
+            button_height = min(50, int(nav_height / 2.5))  # Smaller height to prevent overlap
+        else:
+            # Standard sizing for larger screens
+            button_width = int(nav_available_width / 3)  # 3 buttons per row
+            button_height = int((nav_height - 20) / 2)  # 2 rows, account for margins
+            
         button_size = (button_width, button_height)
+        
+        # Debug info for Pi sizing
+        if self.is_raspberry_pi:
+            logging.info(f"Pi button sizing: window={window_width}x{window_height}, nav_width={int(window_width * nav_width_percent)}, button={button_width}x{button_height}")
+        
+        # Determine icon size based on platform
+        if self.is_raspberry_pi:
+            icon_size_ratio = 0.35  # Slightly larger icons for small Pi buttons
+        else:
+            icon_size_ratio = 0.25  # Standard icon size
+            
+        icon_size = QSize(int(button_width * icon_size_ratio), int(button_height * icon_size_ratio))
         
         self.back_btn = QPushButton()
         self.back_btn.setIcon(self.load_icon('back'))
-        self.back_btn.setIconSize(QSize(int(button_width * 0.25), int(button_height * 0.25)))
+        self.back_btn.setIconSize(icon_size)
         self.back_btn.clicked.connect(self.web_view.back)
         self.back_btn.setFixedSize(*button_size)
         self.back_btn.setStyleSheet(nav_button_style)
@@ -316,7 +347,7 @@ class KioskBrowser(QMainWindow):
         
         self.forward_btn = QPushButton()
         self.forward_btn.setIcon(self.load_icon('forward'))
-        self.forward_btn.setIconSize(QSize(int(button_width * 0.25), int(button_height * 0.25)))
+        self.forward_btn.setIconSize(icon_size)
         self.forward_btn.clicked.connect(self.web_view.forward)
         self.forward_btn.setFixedSize(*button_size)
         self.forward_btn.setStyleSheet(nav_button_style)
@@ -324,7 +355,7 @@ class KioskBrowser(QMainWindow):
         
         self.refresh_btn = QPushButton()
         self.refresh_btn.setIcon(self.load_icon('refresh'))
-        self.refresh_btn.setIconSize(QSize(int(button_width * 0.25), int(button_height * 0.25)))
+        self.refresh_btn.setIconSize(icon_size)
         self.refresh_btn.clicked.connect(self.web_view.reload)
         self.refresh_btn.setFixedSize(*button_size)
         self.refresh_btn.setStyleSheet(nav_button_style)
@@ -332,7 +363,7 @@ class KioskBrowser(QMainWindow):
         
         self.home_btn = QPushButton()
         self.home_btn.setIcon(self.load_icon('home'))
-        self.home_btn.setIconSize(QSize(int(button_width * 0.25), int(button_height * 0.25)))
+        self.home_btn.setIconSize(icon_size)
         self.home_btn.clicked.connect(self.load_home_page)
         self.home_btn.setFixedSize(*button_size)
         self.home_btn.setStyleSheet(nav_button_style)
@@ -340,7 +371,7 @@ class KioskBrowser(QMainWindow):
         
         self.fullscreen_btn = QPushButton()
         self.fullscreen_btn.setIcon(self.load_icon('fullscreen'))
-        self.fullscreen_btn.setIconSize(QSize(int(button_width * 0.25), int(button_height * 0.25)))
+        self.fullscreen_btn.setIconSize(icon_size)
         self.fullscreen_btn.clicked.connect(self.toggle_fullscreen)
         self.fullscreen_btn.setFixedSize(*button_size)
         self.fullscreen_btn.setStyleSheet(f"""
@@ -375,7 +406,7 @@ class KioskBrowser(QMainWindow):
             # Virtual keyboard toggle button
             self.keyboard_btn = QPushButton()
             self.keyboard_btn.setIcon(self.load_icon('keyboard'))
-            self.keyboard_btn.setIconSize(QSize(int(button_width * 0.25), int(button_height * 0.25)))
+            self.keyboard_btn.setIconSize(icon_size)
             self.keyboard_btn.clicked.connect(self.toggle_virtual_keyboard)
             self.keyboard_btn.setFixedSize(*button_size)
             self.keyboard_visible = False  # Track keyboard state
@@ -386,7 +417,7 @@ class KioskBrowser(QMainWindow):
             # Shutdown button
             self.shutdown_btn = QPushButton()
             self.shutdown_btn.setIcon(self.load_icon('shutdown'))
-            self.shutdown_btn.setIconSize(QSize(int(button_width * 0.4), int(button_height * 0.4)))
+            self.shutdown_btn.setIconSize(icon_size)
             self.shutdown_btn.clicked.connect(self.shutdown_pi)
             self.shutdown_btn.setFixedSize(*button_size)
             self.shutdown_btn.setStyleSheet(f"""
