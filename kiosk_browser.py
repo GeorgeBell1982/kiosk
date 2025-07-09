@@ -11,6 +11,7 @@ import logging
 import subprocess
 import os
 import time
+import tempfile
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                             QWidget, QPushButton, QFrame, QMessageBox, QLabel)
 
@@ -553,7 +554,7 @@ class KioskBrowser(QMainWindow):
         # Qt6 WebEngine has better modern web support by default
         settings = self.web_view.settings()
         
-        # Enhanced settings for Qt6
+        # Enhanced settings for Qt6 with persistent storage
         settings.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
@@ -566,8 +567,25 @@ class KioskBrowser(QMainWindow):
         settings.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.FullScreenSupportEnabled, True)
         
+        # Additional storage settings for login persistence
+        settings.setAttribute(QWebEngineSettings.WebAttribute.AutoLoadImages, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, True)
+        
         # Qt6 WebEngine profile for modern compatibility
         profile = self.web_view.page().profile()
+        
+        # Configure persistent storage for Home Assistant login persistence
+        data_dir = os.path.expanduser("~/.office_kiosk_data")
+        os.makedirs(data_dir, exist_ok=True)
+        
+        # Set persistent storage paths
+        profile.setPersistentStoragePath(data_dir)
+        profile.setCachePath(os.path.join(data_dir, "cache"))
+        
+        # Enable persistent cookies and storage
+        from PyQt6.QtWebEngineCore import QWebEngineProfile
+        profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
         
         # Set a modern user agent that YouTube will accept
         modern_user_agent = (
@@ -576,6 +594,7 @@ class KioskBrowser(QMainWindow):
         )
         profile.setHttpUserAgent(modern_user_agent)
         logging.info(f"Set modern user agent: {modern_user_agent}")
+        logging.info(f"Configured persistent storage at: {data_dir}")
         
         # Additional optimizations for Raspberry Pi
         if self.is_raspberry_pi:
@@ -1239,44 +1258,40 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
 def main():
     """Main function to run the application"""
     
-    # Check for existing instance using a simple lock file approach
-    import tempfile
-    
-    lock_file_path = os.path.join(tempfile.gettempdir(), 'office_kiosk_browser.lock')
+    # Better single-instance check using process name matching
+    current_pid = os.getpid()
+    script_name = "kiosk_browser.py"
     
     try:
-        # Check if lock file exists and contains a valid PID
-        if os.path.exists(lock_file_path):
-            with open(lock_file_path, 'r') as f:
-                pid_str = f.read().strip()
-                if pid_str.isdigit():
-                    pid = int(pid_str)
-                    # Check if process is still running (cross-platform)
-                    try:
-                        if os.name == 'nt':  # Windows
-                            import subprocess
-                            result = subprocess.run(['tasklist', '/FI', f'PID eq {pid}'], 
-                                                  capture_output=True, text=True)
-                            if str(pid) in result.stdout:
+        if os.name == 'nt':  # Windows
+            result = subprocess.run(['wmic', 'process', 'where', f'name="python.exe"', 'get', 'ProcessId,CommandLine'], 
+                                  capture_output=True, text=True)
+            lines = result.stdout.split('\n')
+            for line in lines:
+                if script_name in line and 'ProcessId' not in line:
+                    # Extract PID from the line
+                    parts = line.strip().split()
+                    if parts:
+                        try:
+                            pid = int(parts[-1])
+                            if pid != current_pid:
                                 print("Office Kiosk Browser is already running.")
                                 print("Only one instance is allowed. Exiting.")
                                 sys.exit(0)
-                        else:  # Unix/Linux
-                            os.kill(pid, 0)  # This will raise OSError if process doesn't exist
-                            print("Office Kiosk Browser is already running.")
-                            print("Only one instance is allowed. Exiting.")
-                            sys.exit(0)
-                    except (OSError, subprocess.SubprocessError):
-                        # Process doesn't exist, remove stale lock file
-                        os.remove(lock_file_path)
-        
-        # Create new lock file with current PID
-        with open(lock_file_path, 'w') as f:
-            f.write(str(os.getpid()))
-            
+                        except (ValueError, IndexError):
+                            continue
+        else:  # Unix/Linux
+            result = subprocess.run(['pgrep', '-f', script_name], capture_output=True, text=True)
+            if result.returncode == 0:
+                pids = [int(pid.strip()) for pid in result.stdout.strip().split('\n') if pid.strip().isdigit()]
+                other_pids = [pid for pid in pids if pid != current_pid]
+                if other_pids:
+                    print(f"Office Kiosk Browser is already running (PIDs: {other_pids}).")
+                    print("Only one instance is allowed. Exiting.")
+                    sys.exit(0)
     except Exception as e:
-        logging.warning(f"Could not create lock file: {e}")
-        # Continue anyway - lock file is just a safety feature
+        logging.warning(f"Could not check for existing instances: {e}")
+        # Continue anyway - single instance check is just a safety feature
     
     # Set Qt application attributes before creating QApplication
     # Note: In Qt6, high DPI scaling is enabled by default

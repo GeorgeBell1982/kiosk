@@ -28,9 +28,10 @@ check_autostart_status() {
     # Check if app is currently running
     if pgrep -f "kiosk_browser.py" >/dev/null; then
         RUNNING_PIDS=$(pgrep -f "kiosk_browser.py" | tr '\n' ' ')
-        if [ $(echo $RUNNING_PIDS | wc -w) -gt 1 ]; then
+        NUM_INSTANCES=$(echo $RUNNING_PIDS | wc -w)
+        if [ $NUM_INSTANCES -gt 1 ]; then
             warning "⚠️  Multiple instances running (PIDs: $RUNNING_PIDS)"
-            warning "   This may cause conflicts - consider stopping all and restarting"
+            warning "   This causes conflicts - run './install/manage_autostart.sh stop' to fix"
         else
             success "✅ App currently running (PID: $RUNNING_PIDS)"
         fi
