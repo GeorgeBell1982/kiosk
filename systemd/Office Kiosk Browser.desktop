@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Office Kiosk Browser
+Comment=Touchscreen-friendly browser for Raspberry Pi kiosks
+Exec=python3 /home/pi/office_kiosk/kiosk_browser.py
+Path=/home/pi/office_kiosk
+Icon=/home/pi/office_kiosk/icons/home.svg
+Terminal=false
+Categories=Network;WebBrowser;
+StartupNotify=true
+StartupWMClass=Office Kiosk Browser

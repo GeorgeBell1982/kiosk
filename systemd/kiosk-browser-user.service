@@ -8,7 +8,7 @@ Type=simple
 Environment=DISPLAY=:0
 Environment=XDG_RUNTIME_DIR=/run/user/1000
 WorkingDirectory=%h/office_kiosk
-ExecStart=%h/office_kiosk/start_kiosk.sh
+ExecStart=%h/office_kiosk/scripts/start_kiosk.sh
 Restart=always
 RestartSec=10
 

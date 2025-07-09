@@ -5,8 +5,8 @@ REM This script activates the virtual environment and runs the kiosk browser
 echo Starting Office Kiosk Browser...
 echo.
 
-REM Change to the script directory
-cd /d "%~dp0"
+REM Change to the project root directory (parent of scripts)
+cd /d "%~dp0\.."
 
 REM Activate virtual environment and run the application
 .venv\Scripts\python.exe kiosk_browser.py %*

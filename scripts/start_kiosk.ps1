@@ -19,11 +19,12 @@ if ($Help) {
 Write-Host "Starting Office Kiosk Browser..." -ForegroundColor Green
 Write-Host ""
 
-# Get the script directory
+# Get the project root directory (parent of scripts)
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ProjectDir = Split-Path -Parent $ScriptDir
 
-# Change to the script directory
-Set-Location $ScriptDir
+# Change to the project directory
+Set-Location $ProjectDir
 
 # Check if virtual environment exists
 if (-not (Test-Path ".venv")) {

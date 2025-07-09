@@ -5,16 +5,16 @@
 echo "Starting Office Kiosk Browser..."
 echo
 
+# Change to the project root directory (parent of scripts)
+cd "$(dirname "$0")/.."
+PROJECT_DIR="$(pwd)"
+
 # Display version information
 if [ -f "version.py" ]; then
     VERSION=$(python3 -c "import version; print(f'v{version.__version__} ({version.__build_date__})')" 2>/dev/null || echo "Unknown")
     echo "Version: $VERSION"
     echo
 fi
-
-# Change to the script directory
-cd "$(dirname "$0")"
-SCRIPT_DIR="$(pwd)"
 
 # Set environment variables for GUI applications
 export DISPLAY=${DISPLAY:-:0}
@@ -55,9 +55,9 @@ fi
 # Check for updates on Raspberry Pi
 if grep -q "Raspberry Pi" /proc/cpuinfo 2>/dev/null; then
     echo "Checking for updates..."
-    if [ -f "update_check.sh" ]; then
-        chmod +x update_check.sh
-        ./update_check.sh
+    if [ -f "scripts/update_check.sh" ]; then
+        chmod +x scripts/update_check.sh
+        ./scripts/update_check.sh
         
         # Check if restart is needed after update
         if [ -f "/tmp/kiosk-restart-needed" ]; then
@@ -178,7 +178,7 @@ if [ "$QT_TO_USE" = "none" ]; then
         echo "❌ Qt still not available. Please install manually:"
         echo "   For Qt6: sudo apt install python3-pyqt6 python3-pyqt6.qtwebengine"
         echo "   For Qt5: sudo apt install python3-pyqt5 python3-pyqt5.qtwebengine"
-        echo "   Or run: ./debug_startup.sh"
+        echo "   Or run: ./scripts/debug_startup.sh"
         echo "   Or run: python3 test_qt_version.py"
         exit 1
     fi
