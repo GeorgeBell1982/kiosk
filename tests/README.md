@@ -38,7 +38,9 @@ Tests virtual keyboard (wvkbd) functionality on Raspberry Pi.
 - Environment detection (Wayland vs X11)
 - wvkbd installation check and auto-install
 - Process management testing
-- Wayland-optimized settings test
+- Compact keyboard testing (180px/160px height)
+- Bottom-anchored positioning test
+- Overlay layer compatibility test
 - Manual test command suggestions
 - Troubleshooting guidance
 

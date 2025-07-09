@@ -34,11 +34,16 @@ sudo ninja -C build install
 
 ## Features
 
+- **Compact Design**: Reduced height (180px on Wayland, 160px on X11) to leave more text visible
+- **Smart Positioning**: Bottom-anchored when possible to keep text area clear  
 - **Automatic positioning**: Keyboard appears at the bottom of the screen
 - **Landscape layout**: Optimized for touchscreen use
+- **Fullscreen Compatibility**: Overlay layer support or temporary fullscreen exit
+- **Environment Detection**: Wayland vs X11 optimized settings
 - **Clean shutdown**: Keyboard automatically hides when app closes
 - **Visual feedback**: Button changes color to show keyboard state
 - **Touch-friendly**: Large keys suitable for finger input
+- **Multiple Fallbacks**: Automatic fallback modes if advanced features aren't supported
 
 ## Keyboard Layout
 
@@ -61,11 +66,14 @@ If the virtual keyboard doesn't appear when clicked:
 
 2. **Manually test keyboard**:
    ```bash
-   # Try with overlay layer for Wayland (better fullscreen support)
-   wvkbd-mobintl -L 300 --layer overlay
+   # Compact keyboard for better text access (Wayland)
+   wvkbd-mobintl -L 180 --bg 333333cc --fg ffffff --layer overlay --anchor bottom
    
-   # Fallback for older wvkbd versions
-   wvkbd-mobintl -L 300
+   # Compact keyboard fallback
+   wvkbd-mobintl -L 180 --layer overlay
+   
+   # X11 compact version
+   wvkbd-mobintl -L 160 --fg white
    ```
 
 3. **Fullscreen Application Issues**:

@@ -900,23 +900,24 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                 is_wayland = wayland_display or xdg_session_type == 'wayland'
                 
                 if is_wayland:
-                    # Wayland-optimized command with overlay layer to appear above fullscreen apps
+                    # Wayland-optimized command with compact, movable keyboard
                     cmd = [
                         'wvkbd-mobintl',
-                        '-L', '300',  # Landscape mode with height
+                        '-L', '180',  # Shorter landscape height (was 300)
                         '--bg', '333333cc',  # Semi-transparent dark background
                         '--fg', 'ffffff',     # White text
-                        '--layer', 'overlay'  # Use overlay layer to appear above fullscreen apps
+                        '--layer', 'overlay',  # Use overlay layer to appear above fullscreen apps
+                        '--anchor', 'bottom'   # Anchor to bottom to leave text area clear
                     ]
-                    logging.info("Using Wayland-optimized wvkbd settings with overlay layer")
+                    logging.info("Using compact Wayland keyboard (180px height, bottom-anchored)")
                 else:
-                    # X11 fallback
+                    # X11 fallback with compact keyboard
                     cmd = [
                         'wvkbd-mobintl',
-                        '-L', '280',  # Landscape mode with height
+                        '-L', '160',  # Shorter landscape height for X11
                         '--fg', 'white'
                     ]
-                    logging.info("Using X11 wvkbd settings")
+                    logging.info("Using compact X11 keyboard (160px height)")
                 
                 # Start keyboard process
                 try:
@@ -925,9 +926,17 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                     # Quick check if process started successfully
                     time.sleep(0.1)
                     if process.poll() is not None:
-                        # Process died immediately, try basic fallback
-                        logging.warning("Landscape mode failed, trying basic wvkbd")
-                        process = subprocess.Popen(['wvkbd-mobintl'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        # Process died immediately, try without anchor if that was the issue
+                        if '--anchor' in cmd:
+                            logging.warning("Anchored keyboard failed, trying without anchor...")
+                            cmd_no_anchor = [arg for arg in cmd if arg != '--anchor' and arg != 'bottom']
+                            process = subprocess.Popen(cmd_no_anchor, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                            time.sleep(0.1)
+                        
+                        # If still failing, try basic fallback
+                        if process.poll() is not None:
+                            logging.warning("Compact keyboard failed, trying basic wvkbd")
+                            process = subprocess.Popen(['wvkbd-mobintl'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                         
                         # If we're in fullscreen and keyboard fails to overlay, temporarily exit fullscreen
                         if self.isFullScreen():

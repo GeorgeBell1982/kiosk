@@ -47,35 +47,43 @@ echo "  Starting wvkbd-mobintl with basic settings..."
 
 # Detect Wayland vs X11
 if [ -n "$WAYLAND_DISPLAY" ] || [ "$XDG_SESSION_TYPE" = "wayland" ]; then
-    echo "  📡 Wayland detected - using Wayland-optimized settings"
-    echo "  📋 Testing with overlay layer for fullscreen compatibility..."
-    wvkbd-mobintl -L 300 --bg 333333cc --fg ffffff --layer overlay &
+    echo "  📡 Wayland detected - using compact keyboard (180px height)"
+    echo "  📋 Testing compact keyboard with bottom anchor..."
+    wvkbd-mobintl -L 180 --bg 333333cc --fg ffffff --layer overlay --anchor bottom &
     KEYBOARD_PID=$!
     sleep 1
     
-    # Check if it started, if not try without overlay layer
+    # Check if it started, if not try without anchor
     if ! pgrep wvkbd-mobintl >/dev/null; then
-        echo "  ⚠️  Overlay layer failed, trying without layer option..."
-        wvkbd-mobintl -L 300 --bg 333333cc --fg ffffff &
+        echo "  ⚠️  Anchor failed, trying compact without anchor..."
+        wvkbd-mobintl -L 180 --bg 333333cc --fg ffffff --layer overlay &
         KEYBOARD_PID=$!
         sleep 1
         
-        # If still failed, try basic command
+        # Check if it started, if not try without overlay layer
         if ! pgrep wvkbd-mobintl >/dev/null; then
-            echo "  ⚠️  Landscape mode failed, trying basic mode..."
-            wvkbd-mobintl &
+            echo "  ⚠️  Overlay layer failed, trying compact basic..."
+            wvkbd-mobintl -L 180 --bg 333333cc --fg ffffff &
             KEYBOARD_PID=$!
+            sleep 1
+            
+            # If still failed, try basic command
+            if ! pgrep wvkbd-mobintl >/dev/null; then
+                echo "  ⚠️  Compact mode failed, trying basic mode..."
+                wvkbd-mobintl &
+                KEYBOARD_PID=$!
+            fi
         fi
     fi
 else
-    echo "  🖥️  X11 detected - using X11 settings"
-    wvkbd-mobintl -L 280 --fg white &
+    echo "  🖥️  X11 detected - using compact X11 settings (160px height)"
+    wvkbd-mobintl -L 160 --fg white &
     KEYBOARD_PID=$!
     sleep 1
     
     # Check if it started, if not try basic command
     if ! pgrep wvkbd-mobintl >/dev/null; then
-        echo "  ⚠️  Landscape mode failed, trying basic mode..."
+        echo "  ⚠️  Compact mode failed, trying basic mode..."
         wvkbd-mobintl &
         KEYBOARD_PID=$!
     fi
