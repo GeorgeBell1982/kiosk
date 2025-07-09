@@ -41,7 +41,7 @@ except ImportError:
     class QWebEngineProfile:
         pass
 
-from PyQt6.QtCore import QUrl, Qt, QSize
+from PyQt6.QtCore import QUrl, Qt, QSize, QTimer
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QPainter
 from PyQt6.QtSvgWidgets import QSvgWidget
 
@@ -308,7 +308,7 @@ class KioskBrowser(QMainWindow):
         
         self.back_btn = QPushButton()
         self.back_btn.setIcon(self.load_icon('back'))
-        self.back_btn.setIconSize(QSize(int(button_width * 0.4), int(button_height * 0.4)))
+        self.back_btn.setIconSize(QSize(int(button_width * 0.25), int(button_height * 0.25)))
         self.back_btn.clicked.connect(self.web_view.back)
         self.back_btn.setFixedSize(*button_size)
         self.back_btn.setStyleSheet(nav_button_style)
@@ -316,7 +316,7 @@ class KioskBrowser(QMainWindow):
         
         self.forward_btn = QPushButton()
         self.forward_btn.setIcon(self.load_icon('forward'))
-        self.forward_btn.setIconSize(QSize(int(button_width * 0.4), int(button_height * 0.4)))
+        self.forward_btn.setIconSize(QSize(int(button_width * 0.25), int(button_height * 0.25)))
         self.forward_btn.clicked.connect(self.web_view.forward)
         self.forward_btn.setFixedSize(*button_size)
         self.forward_btn.setStyleSheet(nav_button_style)
@@ -324,7 +324,7 @@ class KioskBrowser(QMainWindow):
         
         self.refresh_btn = QPushButton()
         self.refresh_btn.setIcon(self.load_icon('refresh'))
-        self.refresh_btn.setIconSize(QSize(int(button_width * 0.4), int(button_height * 0.4)))
+        self.refresh_btn.setIconSize(QSize(int(button_width * 0.25), int(button_height * 0.25)))
         self.refresh_btn.clicked.connect(self.web_view.reload)
         self.refresh_btn.setFixedSize(*button_size)
         self.refresh_btn.setStyleSheet(nav_button_style)
@@ -332,7 +332,7 @@ class KioskBrowser(QMainWindow):
         
         self.home_btn = QPushButton()
         self.home_btn.setIcon(self.load_icon('home'))
-        self.home_btn.setIconSize(QSize(int(button_width * 0.4), int(button_height * 0.4)))
+        self.home_btn.setIconSize(QSize(int(button_width * 0.25), int(button_height * 0.25)))
         self.home_btn.clicked.connect(self.load_home_page)
         self.home_btn.setFixedSize(*button_size)
         self.home_btn.setStyleSheet(nav_button_style)
@@ -340,7 +340,7 @@ class KioskBrowser(QMainWindow):
         
         self.fullscreen_btn = QPushButton()
         self.fullscreen_btn.setIcon(self.load_icon('fullscreen'))
-        self.fullscreen_btn.setIconSize(QSize(int(button_width * 0.4), int(button_height * 0.4)))
+        self.fullscreen_btn.setIconSize(QSize(int(button_width * 0.25), int(button_height * 0.25)))
         self.fullscreen_btn.clicked.connect(self.toggle_fullscreen)
         self.fullscreen_btn.setFixedSize(*button_size)
         self.fullscreen_btn.setStyleSheet(f"""
@@ -375,7 +375,7 @@ class KioskBrowser(QMainWindow):
             # Virtual keyboard toggle button
             self.keyboard_btn = QPushButton()
             self.keyboard_btn.setIcon(self.load_icon('keyboard'))
-            self.keyboard_btn.setIconSize(QSize(int(button_width * 0.4), int(button_height * 0.4)))
+            self.keyboard_btn.setIconSize(QSize(int(button_width * 0.25), int(button_height * 0.25)))
             self.keyboard_btn.clicked.connect(self.toggle_virtual_keyboard)
             self.keyboard_btn.setFixedSize(*button_size)
             self.keyboard_visible = False  # Track keyboard state
@@ -833,22 +833,30 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
             return
         
         try:
-            if self.keyboard_visible:
+            # Check if keyboard is actually running
+            result = subprocess.run(['pgrep', 'wvkbd-mobintl'], capture_output=True, text=True)
+            keyboard_running = result.returncode == 0
+            
+            if keyboard_running:
                 # Hide keyboard
                 logging.info("Hiding virtual keyboard (wvkbd)")
-                subprocess.run(['pkill', 'wvkbd-mobintl'], check=False)  # Don't fail if already closed
+                subprocess.run(['pkill', 'wvkbd-mobintl'], check=False)
                 self.keyboard_visible = False
             else:
                 # Show keyboard
                 logging.info("Showing virtual keyboard (wvkbd)")
-                # Start wvkbd in the background with optimal settings for touchscreen
+                # Start wvkbd with settings that ensure it's visible and on top
                 subprocess.Popen([
                     'wvkbd-mobintl',
-                    '--hidden',  # Start hidden, then show
                     '--landscape',  # Use landscape layout
-                    '--height', '250',  # Set height
-                    '--margin', '5'  # Add margin
+                    '--height', '280',  # Set height
+                    '--margin', '5',  # Add margin
+                    '--fg', 'white',  # White text
+                    '--layer', 'overlay'  # Try to appear as overlay
                 ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                
+                # Small delay to allow keyboard to start, then try to ensure it's visible
+                QTimer.singleShot(200, lambda: self.ensure_keyboard_visible())
                 self.keyboard_visible = True
             
             # Update button appearance
@@ -868,6 +876,17 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
         except Exception as e:
             logging.error(f"Error toggling virtual keyboard: {e}")
             QMessageBox.warning(self, "Keyboard Error", f"Failed to toggle virtual keyboard: {e}")
+    
+    def ensure_keyboard_visible(self):
+        """Ensure the virtual keyboard is visible and on top"""
+        try:
+            # Try to raise/focus the keyboard window
+            subprocess.run(['wmctrl', '-a', 'wvkbd'], check=False)
+        except FileNotFoundError:
+            # wmctrl not available, that's okay
+            pass
+        except Exception as e:
+            logging.debug(f"Could not raise keyboard window: {e}")
     
     def update_keyboard_button_style(self):
         """Update the keyboard button style based on current state"""

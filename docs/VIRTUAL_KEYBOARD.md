@@ -51,32 +51,51 @@ wvkbd provides a mobile-style keyboard with:
 
 ## Troubleshooting
 
-### Keyboard doesn't appear
-1. Check if wvkbd is installed: `which wvkbd-mobintl`
-2. Test manually: `wvkbd-mobintl --landscape --height 250`
-3. Check display manager (works best with Wayland)
+### Keyboard Not Visible
+If the virtual keyboard doesn't appear when clicked:
 
-### Button not visible
-- Virtual keyboard button only appears on Raspberry Pi
-- For testing on other systems, the button is hidden
+1. **Check if wvkbd is running**:
+   ```bash
+   pgrep wvkbd-mobintl
+   ```
 
-### Keyboard appears in wrong position
-- wvkbd automatically positions itself at the bottom
-- Adjust height with `--height` parameter if needed
+2. **Manually test keyboard**:
+   ```bash
+   wvkbd-mobintl --landscape --height 280
+   ```
 
-## Alternative Keyboards
+3. **Check window manager compatibility**:
+   - The keyboard works best with Wayland compositors
+   - On X11, you may need additional window manager tools like `wmctrl`
+   - Install wmctrl for better window management: `sudo apt install wmctrl`
 
-If wvkbd is not suitable, you can modify the `toggle_virtual_keyboard()` method to use:
-- `onboard`: GNOME's virtual keyboard
-- `florence`: Cross-platform virtual keyboard
-- `squeekboard`: Phosh's virtual keyboard
+4. **If keyboard appears behind browser**:
+   - The browser automatically tries to raise the keyboard window
+   - Try clicking in a text field first, then toggle the keyboard
+   - Switch to a different virtual terminal and back: `Ctrl+Alt+F2`, then `Ctrl+Alt+F7`
+
+5. **Alternative keyboard activation**:
+   ```bash
+   # Kill any existing keyboard
+   pkill wvkbd-mobintl
+   
+   # Start with explicit layer settings
+   wvkbd-mobintl --landscape --height 280 --layer overlay
+   ```
+
+### Button Icons Too Large
+If navigation button icons appear too large:
+- The latest version reduces icon size from 40% to 25% of button size
+- Icons should now better match the SVG designs
+- Restart the application after updates
 
 ## Configuration
 
 The keyboard is configured with optimal settings for the kiosk browser:
-- Height: 250 pixels
+- Height: 280 pixels (updated)
 - Layout: Mobile international (mobintl)
 - Position: Bottom of screen
 - Margins: 5 pixels
+- Layer: Overlay (for better visibility)
 
 These settings can be adjusted in the `toggle_virtual_keyboard()` method in `kiosk_browser.py`.
