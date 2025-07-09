@@ -194,8 +194,26 @@ main() {
     log "Final verification..."
     if test_pyqt6; then
         success "🎉 PyQt6 installation complete and verified!"
+        
+        # Ask user if they want to set up autostart
+        echo
+        read -p "Would you like to set up autostart so the kiosk browser launches on boot? [Y/n]: " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+            log "Setting up autostart..."
+            chmod +x "$SCRIPT_DIR/setup_autostart.sh"
+            "$SCRIPT_DIR/setup_autostart.sh"
+        else
+            log "Skipping autostart setup. You can run it later with: ./install/setup_autostart.sh"
+        fi
+        
+        echo
+        success "Installation complete!"
         success "You can now run: python3 test_qt_version.py"
         success "And then: python3 kiosk_browser.py"
+        if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+            success "The app will start automatically on next boot!"
+        fi
     else
         error "Installation completed but final test failed"
         exit 1

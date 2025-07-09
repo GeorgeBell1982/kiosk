@@ -81,6 +81,33 @@ python3 tests/test_svg_icons.py
 - **Display**: Any resolution, optimized for 1024x600 touchscreens
 - **Python**: 3.9+ with PyQt6, PyQt6-WebEngine, PyQt6-Svg
 
-## 📄 License
+## � Autostart Setup
+
+To automatically start the kiosk browser on boot:
+
+```bash
+# Enable autostart (run once after installation)
+./install/setup_autostart.sh
+
+# Or use the management script
+./install/manage_autostart.sh enable
+```
+
+**Check autostart status:**
+```bash
+./install/manage_autostart.sh status
+```
+
+**Disable autostart:**
+```bash
+./install/manage_autostart.sh disable
+```
+
+The autostart setup configures multiple methods:
+- **Desktop autostart** - starts when user logs into desktop
+- **Systemd user service** - more robust, survives logout
+- **Bashrc fallback** - backup method for shell logins
+
+## �📄 License
 
 MIT License - see LICENSE file for details

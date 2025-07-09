@@ -8,6 +8,9 @@ Type=simple
 User=pi
 Group=pi
 Environment=DISPLAY=:0
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=XDG_SESSION_TYPE=wayland
 WorkingDirectory=/home/pi/office_kiosk
 ExecStart=/home/pi/office_kiosk/.venv/bin/python /home/pi/office_kiosk/kiosk_browser.py --fullscreen
 Restart=always
