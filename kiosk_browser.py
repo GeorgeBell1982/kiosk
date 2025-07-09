@@ -10,6 +10,7 @@ import sys
 import logging
 import subprocess
 import os
+import time
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                             QWidget, QPushButton, QFrame, QMessageBox, QLabel)
 
@@ -894,8 +895,7 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                     # Wayland-optimized command
                     cmd = [
                         'wvkbd-mobintl',
-                        '-L',  # Landscape mode
-                        '-H', '300',  # Height (correct flag)
+                        '-L', '300',  # Landscape mode with height
                         '--bg', '333333cc',  # Semi-transparent dark background
                         '--fg', 'ffffff'     # White text
                     ]
@@ -904,14 +904,26 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                     # X11 fallback
                     cmd = [
                         'wvkbd-mobintl',
-                        '-L',  # Landscape mode
-                        '-H', '280',  # Height (correct flag)
+                        '-L', '280',  # Landscape mode with height
                         '--fg', 'white'
                     ]
                     logging.info("Using X11 wvkbd settings")
                 
                 # Start keyboard process
-                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                try:
+                    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    
+                    # Quick check if process started successfully
+                    time.sleep(0.1)
+                    if process.poll() is not None:
+                        # Process died immediately, try basic fallback
+                        logging.warning("Landscape mode failed, trying basic wvkbd")
+                        process = subprocess.Popen(['wvkbd-mobintl'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        
+                except Exception as e:
+                    logging.error(f"Failed to start wvkbd: {e}")
+                    # Try absolute basic fallback
+                    process = subprocess.Popen(['wvkbd-mobintl'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 
                 # Give it a moment to start and check if it's actually running
                 QTimer.singleShot(500, lambda: self.verify_keyboard_started(process))
