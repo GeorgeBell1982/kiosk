@@ -96,6 +96,8 @@ class KioskBrowser(QMainWindow):
             self.setGeometry(0, 0, 1024, 600)
             # Debug keyboard environment on Pi
             self.debug_keyboard_environment()
+            # Clean up any leftover keyboard processes from previous sessions
+            self.cleanup_keyboard_processes()
         else:
             # For development on Windows - use smaller size to match Pi resolution
             self.setGeometry(100, 100, 1024, 600)
@@ -880,9 +882,11 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
             keyboard_running = result.returncode == 0
             
             if keyboard_running:
-                # Hide keyboard
+                # Hide keyboard - kill all instances to prevent conflicts
                 logging.info("Hiding virtual keyboard (wvkbd)")
-                subprocess.run(['pkill', 'wvkbd-mobintl'], check=False)
+                subprocess.run(['pkill', '-f', 'wvkbd-mobintl'], check=False)
+                # Give it a moment to fully terminate
+                time.sleep(0.5)
                 self.keyboard_visible = False
                 
                 # Restore fullscreen if we temporarily exited for keyboard visibility
@@ -1217,9 +1221,63 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                 logging.warning("Developer tools not available")
         except Exception as e:
             logging.error(f"Error opening developer tools: {e}")
+    
+    def cleanup_keyboard_processes(self):
+        """Clean up any leftover keyboard processes from previous sessions"""
+        try:
+            logging.info("Cleaning up any leftover virtual keyboard processes...")
+            # Kill any existing wvkbd processes
+            result = subprocess.run(['pkill', '-f', 'wvkbd-mobintl'], capture_output=True, text=True)
+            if result.returncode == 0:
+                logging.info("Cleaned up existing wvkbd processes")
+                time.sleep(0.5)  # Give processes time to terminate
+            else:
+                logging.info("No existing wvkbd processes found")
+        except Exception as e:
+            logging.warning(f"Could not clean up keyboard processes: {e}")
 
 def main():
     """Main function to run the application"""
+    
+    # Check for existing instance using a simple lock file approach
+    import tempfile
+    
+    lock_file_path = os.path.join(tempfile.gettempdir(), 'office_kiosk_browser.lock')
+    
+    try:
+        # Check if lock file exists and contains a valid PID
+        if os.path.exists(lock_file_path):
+            with open(lock_file_path, 'r') as f:
+                pid_str = f.read().strip()
+                if pid_str.isdigit():
+                    pid = int(pid_str)
+                    # Check if process is still running (cross-platform)
+                    try:
+                        if os.name == 'nt':  # Windows
+                            import subprocess
+                            result = subprocess.run(['tasklist', '/FI', f'PID eq {pid}'], 
+                                                  capture_output=True, text=True)
+                            if str(pid) in result.stdout:
+                                print("Office Kiosk Browser is already running.")
+                                print("Only one instance is allowed. Exiting.")
+                                sys.exit(0)
+                        else:  # Unix/Linux
+                            os.kill(pid, 0)  # This will raise OSError if process doesn't exist
+                            print("Office Kiosk Browser is already running.")
+                            print("Only one instance is allowed. Exiting.")
+                            sys.exit(0)
+                    except (OSError, subprocess.SubprocessError):
+                        # Process doesn't exist, remove stale lock file
+                        os.remove(lock_file_path)
+        
+        # Create new lock file with current PID
+        with open(lock_file_path, 'w') as f:
+            f.write(str(os.getpid()))
+            
+    except Exception as e:
+        logging.warning(f"Could not create lock file: {e}")
+        # Continue anyway - lock file is just a safety feature
+    
     # Set Qt application attributes before creating QApplication
     # Note: In Qt6, high DPI scaling is enabled by default
     # Many Qt5 attributes are no longer needed or have different names in Qt6

@@ -132,18 +132,13 @@ main() {
     
     log "Configuring autostart methods..."
     
+    # For kiosk mode, we want ONLY ONE method to avoid conflicts
     # Method 1: Desktop autostart (most reliable for kiosk mode)
     setup_desktop_autostart
     
-    # Method 2: Systemd user service (more robust, survives user logout)
-    if command -v systemctl >/dev/null; then
-        setup_systemd_user_service
-    else
-        warning "systemctl not available - skipping systemd user service setup"
-    fi
-    
-    # Method 3: .bashrc fallback (works with any shell login)
-    setup_bashrc_autostart
+    # Don't enable multiple methods simultaneously to avoid conflicts
+    log "Desktop autostart configured as primary method"
+    log "Other methods (systemd, bashrc) available but not enabled to prevent conflicts"
     
     echo
     success "🎉 Autostart setup complete!"

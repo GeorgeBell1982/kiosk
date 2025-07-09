@@ -25,6 +25,20 @@ check_autostart_status() {
     echo "===================================="
     echo
     
+    # Check if app is currently running
+    if pgrep -f "kiosk_browser.py" >/dev/null; then
+        RUNNING_PIDS=$(pgrep -f "kiosk_browser.py" | tr '\n' ' ')
+        if [ $(echo $RUNNING_PIDS | wc -w) -gt 1 ]; then
+            warning "⚠️  Multiple instances running (PIDs: $RUNNING_PIDS)"
+            warning "   This may cause conflicts - consider stopping all and restarting"
+        else
+            success "✅ App currently running (PID: $RUNNING_PIDS)"
+        fi
+    else
+        log "❌ App not currently running"
+    fi
+    echo
+    
     # Check desktop autostart
     DESKTOP_AUTOSTART="$HOME/.config/autostart/office-kiosk-browser.desktop"
     if [[ -f "$DESKTOP_AUTOSTART" ]]; then
@@ -93,14 +107,51 @@ disable_autostart() {
     success "Autostart disabled"
 }
 
+# Stop running instances
+stop_running_instances() {
+    log "Stopping all running Office Kiosk Browser instances..."
+    
+    if pgrep -f "kiosk_browser.py" >/dev/null; then
+        RUNNING_PIDS=$(pgrep -f "kiosk_browser.py")
+        echo "  Found running instances: $RUNNING_PIDS"
+        
+        # Stop gracefully first
+        pkill -f "kiosk_browser.py"
+        sleep 2
+        
+        # Force kill if still running
+        if pgrep -f "kiosk_browser.py" >/dev/null; then
+            warning "  Some instances still running, force killing..."
+            pkill -9 -f "kiosk_browser.py"
+            sleep 1
+        fi
+        
+        # Also clean up virtual keyboard processes
+        pkill -f "wvkbd-mobintl" 2>/dev/null || true
+        
+        if pgrep -f "kiosk_browser.py" >/dev/null; then
+            error "Failed to stop all instances"
+            return 1
+        else
+            success "All instances stopped"
+            return 0
+        fi
+    else
+        log "No running instances found"
+        return 0
+    fi
+}
+
 # Show usage
 usage() {
-    echo "Usage: $0 [enable|disable|status]"
+    echo "Usage: $0 [enable|disable|status|stop|restart]"
     echo
     echo "Commands:"
-    echo "  enable   - Enable autostart (setup all autostart methods)"
+    echo "  enable   - Enable autostart (setup desktop autostart method)"
     echo "  disable  - Disable autostart (remove all autostart methods)"
-    echo "  status   - Show current autostart status"
+    echo "  status   - Show current autostart status and running instances"
+    echo "  stop     - Stop all running instances of the app"
+    echo "  restart  - Stop all instances and start a new one"
     echo
     echo "If no command is provided, status will be shown."
 }
@@ -119,6 +170,18 @@ main() {
             check_autostart_status
             ;;
         "status")
+            check_autostart_status
+            ;;
+        "stop")
+            stop_running_instances
+            ;;
+        "restart")
+            stop_running_instances
+            echo
+            log "Starting new instance..."
+            cd "$PROJECT_DIR"
+            python3 kiosk_browser.py --fullscreen &
+            sleep 2
             check_autostart_status
             ;;
         "help"|"-h"|"--help")
