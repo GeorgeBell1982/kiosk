@@ -61,7 +61,8 @@ class SVGTestWindow(QMainWindow):
         
     def load_svg_icon(self, icon_name):
         """Load SVG icon with fallback"""
-        icon_path = os.path.join(os.path.dirname(__file__), 'icons', f'{icon_name}.svg')
+        # Look for icons in the root icons directory
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'icons', f'{icon_name}.svg')
         
         if not os.path.exists(icon_path):
             print(f"⚠️  Icon file not found: {icon_path}")
@@ -103,6 +104,7 @@ class SVGTestWindow(QMainWindow):
         return QIcon(pixmap)
 
 def main():
+    from PyQt6.QtWidgets import QApplication
     app = QApplication(sys.argv)
     
     print("Testing Qt6 SVG Icon Support")
