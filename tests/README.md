@@ -46,6 +46,35 @@ Tests virtual keyboard (wvkbd) functionality on Raspberry Pi.
 
 **Raspberry Pi Only** - This test is designed for Pi hardware with touchscreen support.
 
+### `test_home_assistant_storage.py`
+Interactive GUI test for Home Assistant login persistence.
+```bash
+python3 tests/test_home_assistant_storage.py
+```
+
+**Features:**
+- Tests Qt6 WebEngine storage configuration
+- Checks persistent storage paths and permissions
+- Provides buttons to test cookie persistence
+- Allows clearing storage for fresh testing
+- Shows real-time storage status
+- Load test Home Assistant instance
+- Verify login persistence across sessions
+
+### `test_home_assistant_storage.sh`
+Command-line script to diagnose Home Assistant storage issues.
+```bash
+bash tests/test_home_assistant_storage.sh
+```
+
+**Checks:**
+- Storage directory permissions and contents
+- Cookie and session files detection
+- Qt6 WebEngine configuration in main app
+- Provides troubleshooting recommendations
+- Storage usage statistics
+- File system write permissions
+
 ## Usage
 
 Run tests after installation to verify everything works:
@@ -76,6 +105,12 @@ PyQt Version: 6.x.x
 - GUI window opens showing all icons
 - Icons display as graphics (not text)
 - No error messages in console
+
+**Successful Home Assistant Storage Test:**
+- Storage directory exists and is writable
+- Configuration shows ForcePersistentCookies enabled
+- Cookie files are created when logging in
+- Login persists across browser restarts
 
 ## Troubleshooting
 

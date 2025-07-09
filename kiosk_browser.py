@@ -572,29 +572,89 @@ class KioskBrowser(QMainWindow):
         settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, True)
         
+        # Critical settings for Home Assistant and modern web apps
+        settings.setAttribute(QWebEngineSettings.WebAttribute.AllowWindowActivationFromJavaScript, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.PlaybackRequiresUserGesture, False)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.WebRTCPublicInterfacesOnly, False)
+        
+        # Enable features needed for service workers and offline functionality
+        try:
+            # These may not be available in all Qt6 versions
+            settings.setAttribute(QWebEngineSettings.WebAttribute.PdfViewerEnabled, True)
+        except AttributeError:
+            logging.debug("PdfViewerEnabled not available in this Qt6 version")
+        
+        # Configure default font sizes for better readability
+        settings.setFontSize(QWebEngineSettings.FontSize.DefaultFontSize, 14)
+        settings.setFontSize(QWebEngineSettings.FontSize.DefaultFixedFontSize, 12)
+        settings.setFontSize(QWebEngineSettings.FontSize.MinimumFontSize, 10)
+        
         # Qt6 WebEngine profile for modern compatibility
         profile = self.web_view.page().profile()
         
         # Configure persistent storage for Home Assistant login persistence
         data_dir = os.path.expanduser("~/.office_kiosk_data")
+        cache_dir = os.path.join(data_dir, "cache")
+        downloads_dir = os.path.join(data_dir, "downloads")
+        
+        # Create directories if they don't exist
         os.makedirs(data_dir, exist_ok=True)
+        os.makedirs(cache_dir, exist_ok=True)
+        os.makedirs(downloads_dir, exist_ok=True)
         
         # Set persistent storage paths
         profile.setPersistentStoragePath(data_dir)
-        profile.setCachePath(os.path.join(data_dir, "cache"))
+        profile.setCachePath(cache_dir)
+        profile.setDownloadPath(downloads_dir)
         
-        # Enable persistent cookies and storage
+        # Enable persistent cookies and storage - CRITICAL for Home Assistant login
         from PyQt6.QtWebEngineCore import QWebEngineProfile
         profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
         
-        # Set a modern user agent that YouTube will accept
+        # Configure HTTP cache for better performance and persistence
+        from PyQt6.QtWebEngineCore import QWebEngineProfile
+        profile.setHttpCacheType(QWebEngineProfile.HttpCacheType.DiskHttpCache)
+        profile.setHttpCacheMaximumSize(100 * 1024 * 1024)  # 100MB cache
+        
+        # Set permissions policy for better web app compatibility
+        # This is important for Home Assistant's modern web features
+        try:
+            from PyQt6.QtWebEngineCore import QWebEngineProfile
+            # Allow persistent storage by default
+            profile.setRequestInterceptor(None)  # Don't intercept requests
+        except (AttributeError, ImportError):
+            logging.debug("Advanced profile features not available in this Qt6 version")
+        
+        # Set a modern user agent that Home Assistant will accept
         modern_user_agent = (
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36"
+            "Chrome/120.0.0.0 Safari/537.36 OfficeKiosk/1.0"
         )
         profile.setHttpUserAgent(modern_user_agent)
+        
+        # Log configuration details
         logging.info(f"Set modern user agent: {modern_user_agent}")
         logging.info(f"Configured persistent storage at: {data_dir}")
+        logging.info(f"Cache directory: {cache_dir}")
+        logging.info(f"Downloads directory: {downloads_dir}")
+        logging.info(f"Cookies policy: {profile.persistentCookiesPolicy()}")
+        logging.info(f"Cache type: {profile.httpCacheType()}")
+        logging.info(f"Cache max size: {profile.httpCacheMaximumSize()} bytes")
+        
+        # Verify storage paths are writable
+        try:
+            test_file = os.path.join(data_dir, "test_write")
+            with open(test_file, 'w') as f:
+                f.write("test")
+            os.remove(test_file)
+            logging.info("Storage directory is writable")
+        except Exception as e:
+            logging.error(f"Storage directory is not writable: {e}")
+            # Try to use a fallback location
+            fallback_dir = os.path.join(tempfile.gettempdir(), "office_kiosk_data")
+            os.makedirs(fallback_dir, exist_ok=True)
+            profile.setPersistentStoragePath(fallback_dir)
+            logging.warning(f"Using fallback storage: {fallback_dir}")
         
         # Additional optimizations for Raspberry Pi
         if self.is_raspberry_pi:
@@ -1332,10 +1392,26 @@ def main():
     
     app = QApplication(sys.argv)
     
-    # Set application properties
-    app.setApplicationName("Office Kiosk Browser Qt6")
-    app.setApplicationVersion("2.0")
-    app.setOrganizationName("Office Kiosk")
+    # Set application properties for better Qt6 WebEngine storage identification
+    app.setApplicationName("OfficeKioskBrowser")
+    app.setApplicationDisplayName("Office Kiosk Browser Qt6")
+    app.setApplicationVersion("2.0.0")
+    app.setOrganizationName("OfficeKiosk")
+    app.setOrganizationDomain("office-kiosk.local")
+    
+    # Set additional Qt properties for WebEngine storage
+    if hasattr(app, 'setDesktopFileName'):
+        app.setDesktopFileName("office-kiosk-browser")
+    
+    # Configure Qt6 WebEngine environment for better storage
+    os.environ.setdefault('QT_LOGGING_RULES', '*.debug=false;qt.webenginecontext.debug=true')
+    
+    logging.info(f"Qt Application configured:")
+    logging.info(f"  Name: {app.applicationName()}")
+    logging.info(f"  Display Name: {app.applicationDisplayName()}")
+    logging.info(f"  Version: {app.applicationVersion()}")
+    logging.info(f"  Organization: {app.organizationName()}")
+    logging.info(f"  Domain: {app.organizationDomain()}")
     
     # Create and show the main window
     browser = KioskBrowser()
