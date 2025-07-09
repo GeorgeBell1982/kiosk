@@ -61,7 +61,7 @@ If the virtual keyboard doesn't appear when clicked:
 
 2. **Manually test keyboard**:
    ```bash
-   wvkbd-mobintl --landscape --height 280
+   wvkbd-mobintl -L --height 280
    ```
 
 3. **Check window manager compatibility**:
@@ -80,7 +80,7 @@ If the virtual keyboard doesn't appear when clicked:
    pkill wvkbd-mobintl
    
    # Start with explicit layer settings
-   wvkbd-mobintl --landscape --height 280 --layer overlay
+   wvkbd-mobintl -L --height 280 --layer overlay
    ```
 
 ### Button Icons Too Large

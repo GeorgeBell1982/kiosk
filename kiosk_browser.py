@@ -894,7 +894,7 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                     # Wayland-optimized command
                     cmd = [
                         'wvkbd-mobintl',
-                        '--landscape',
+                        '-L',  # Landscape mode (correct flag)
                         '--height', '300',
                         '--margin', '10',
                         '--bg', '333333cc',  # Semi-transparent dark background
@@ -906,7 +906,7 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                     # X11 fallback
                     cmd = [
                         'wvkbd-mobintl',
-                        '--landscape',
+                        '-L',  # Landscape mode (correct flag)
                         '--height', '280',
                         '--margin', '5',
                         '--fg', 'white',
@@ -982,7 +982,7 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                     f"• Wayland compositor doesn't support virtual keyboards\n"
                     f"• wvkbd needs additional permissions\n"
                     f"• Display server issues\n\n"
-                    f"Try running manually: wvkbd-mobintl --landscape"
+                    f"Try running manually: wvkbd-mobintl -L"
                 )
         except Exception as e:
             logging.error(f"Error verifying keyboard start: {e}")
