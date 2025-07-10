@@ -53,7 +53,7 @@ try:
     SVG_AVAILABLE = True
     logging.info("Qt6 SVG support available")
 except ImportError:
-    logging.warning("Qt6 SVG support not available - SVG icons may not display")
+    logging.warning("Qt6 SVG support not available - using fallback icons. Install PyQt6-Qt6 for SVG icon support.")
     SVG_AVAILABLE = False
     QSvgRenderer = None
 
@@ -70,12 +70,19 @@ class KioskBrowser(QMainWindow):
         version_info = get_full_version_info()
         logging.info(f"Starting Office Kiosk Browser {version_info['formatted']} - Qt6 Version")
         
+        # Log automatic update status
+        if self.is_raspberry_pi:
+            logging.info("Automatic updates are enabled - app will check for and apply updates automatically on startup")
+        else:
+            logging.info("Running on non-Raspberry Pi system - automatic updates disabled")
+        
         self.web_view = None  # Initialize early
         self.is_raspberry_pi = self.detect_raspberry_pi()
         self.keyboard_visible = False  # Track virtual keyboard state
         self.keyboard_temp_windowed = False  # Track if we temporarily exited fullscreen for keyboard
         self.setup_ui()
         self.setup_web_view()
+        self.check_for_updates()  # Check for updates on startup
         self.load_home_page()
         
     def detect_raspberry_pi(self):
@@ -156,45 +163,70 @@ class KioskBrowser(QMainWindow):
         """)
         
     def load_icon(self, icon_name):
-        """Load an SVG icon from the icons directory with Qt6 SVG support"""
+        """Load an SVG icon from the icons directory with Qt6 SVG support and robust fallbacks"""
         icon_path = os.path.join(os.path.dirname(__file__), 'icons', f'{icon_name}.svg')
+        
+        # Try loading the SVG icon
         if os.path.exists(icon_path):
             if SVG_AVAILABLE:
-                # Use SVG renderer to create a pixmap for the icon
-                renderer = QSvgRenderer(icon_path)
-                if renderer.isValid():
-                    # Create a pixmap to render the SVG into
-                    pixmap = QPixmap(64, 64)  # Standard icon size
-                    pixmap.fill(Qt.GlobalColor.transparent)
-                    
-                    painter = QPainter(pixmap)
-                    renderer.render(painter)
-                    painter.end()
-                    
-                    return QIcon(pixmap)
-                else:
-                    logging.warning(f"Invalid SVG file: {icon_path}")
-                    return self.create_fallback_icon(icon_name)
+                try:
+                    # Use SVG renderer to create a pixmap for the icon
+                    renderer = QSvgRenderer(icon_path)
+                    if renderer.isValid():
+                        # Create a pixmap to render the SVG into
+                        pixmap = QPixmap(64, 64)  # Standard icon size
+                        pixmap.fill(Qt.GlobalColor.transparent)
+                        
+                        painter = QPainter(pixmap)
+                        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                        renderer.render(painter)
+                        painter.end()
+                        
+                        icon = QIcon(pixmap)
+                        if not icon.isNull():
+                            logging.debug(f"Successfully loaded SVG icon: {icon_name}")
+                            return icon
+                        else:
+                            logging.warning(f"SVG icon rendered but QIcon is null: {icon_path}")
+                    else:
+                        logging.warning(f"Invalid SVG file: {icon_path}")
+                except Exception as e:
+                    logging.warning(f"Error rendering SVG icon {icon_name}: {e}")
             else:
-                # Fallback: try direct QIcon loading (may not work for SVG in Qt6)
-                icon = QIcon(icon_path)
-                if icon.isNull():
-                    logging.warning(f"SVG icon could not be loaded (Qt6 SVG not available): {icon_path}")
-                    return self.create_fallback_icon(icon_name)
-                return icon
+                # Try direct QIcon loading (may work for some SVG files)
+                try:
+                    icon = QIcon(icon_path)
+                    if not icon.isNull():
+                        logging.debug(f"Successfully loaded icon directly: {icon_name}")
+                        return icon
+                    else:
+                        logging.warning(f"SVG icon could not be loaded directly (Qt6 SVG not available): {icon_path}")
+                except Exception as e:
+                    logging.warning(f"Error loading icon directly {icon_name}: {e}")
         else:
-            logging.warning(f"Icon not found: {icon_path}")
-            return self.create_fallback_icon(icon_name)
+            logging.warning(f"Icon file not found: {icon_path}")
+        
+        # If we reach here, create a fallback icon
+        logging.info(f"Using fallback icon for: {icon_name}")
+        return self.create_fallback_icon(icon_name)
     
     def create_fallback_icon(self, icon_name):
         """Create a simple text-based fallback icon when SVG is not available"""
         pixmap = QPixmap(64, 64)
-        pixmap.fill(Qt.GlobalColor.white)
+        pixmap.fill(Qt.GlobalColor.transparent)
         
         painter = QPainter(pixmap)
-        painter.setPen(Qt.GlobalColor.black)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Create a circular background
+        painter.setBrush(Qt.GlobalColor.darkBlue)
+        painter.setPen(Qt.GlobalColor.white)
+        painter.drawEllipse(4, 4, 56, 56)
+        
+        # Set font and text color
+        painter.setPen(Qt.GlobalColor.white)
         font = QFont()
-        font.setPixelSize(12)
+        font.setPixelSize(20)
         font.setBold(True)
         painter.setFont(font)
         
@@ -741,6 +773,28 @@ class KioskBrowser(QMainWindow):
                     margin-top: 30px;
                     font-weight: bold;
                 }
+                .icon {
+                    font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Times New Roman", serif;
+                    font-size: 1.1em;
+                    margin-right: 8px;
+                    display: inline-block;
+                    vertical-align: middle;
+                }
+                /* Fallback CSS icons if Unicode doesn't work */
+                .icon-fallback {
+                    display: inline-block;
+                    width: 20px;
+                    height: 20px;
+                    margin-right: 8px;
+                    background-color: #a8e6cf;
+                    border-radius: 50%;
+                    vertical-align: middle;
+                    text-align: center;
+                    line-height: 20px;
+                    font-size: 12px;
+                    color: #333;
+                    font-weight: bold;
+                }
                 .radio-stations {
                     margin-top: 40px;
                     background: rgba(155, 89, 182, 0.1);
@@ -788,58 +842,58 @@ class KioskBrowser(QMainWindow):
         </head>
         <body>
             <div class="container">
-                <h1>🖥️ OFFICE KIOSK</h1>
-                <div class="version">✨ Powered by Qt6 - Modern Web Support ✨</div>
+                <h1><span class="icon">&#x1F4BB;</span> OFFICE KIOSK</h1>
+                <div class="version"><span class="icon">&#x2728;</span> Powered by Qt6 - Modern Web Support <span class="icon">&#x2728;</span></div>
                 <div class="welcome">Welcome! Use the shortcuts above to navigate to your favorite services.</div>
                 <div class="time" id="current-time"></div>
                 
-                <div class="features">
-                    <div class="feature-card">
-                        <h3>🏠 HOME ASSISTANT</h3>
-                        <p>Control your smart home devices and automations with modern interface support</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>🎵 YOUTUBE MUSIC</h3>
-                        <p>Stream music with full YouTube compatibility - no more "outdated browser" errors!</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>🔍 GOOGLE SEARCH</h3>
-                        <p>Search the web with full modern browser support and enhanced performance</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>📺 YOUTUBE</h3>
-                        <p>Watch videos with improved video codec support and better performance</p>
-                    </div>
-                </div>
-                
                 <div class="radio-stations">
-                    <h2>📻 Radio Stations</h2>
+                    <h2><span class="icon">&#x1F4FB;</span> Radio Stations</h2>
                     <p style="opacity: 0.8; margin-bottom: 20px;">Quick access to your favorite radio stations</p>
                     <div class="radio-grid">
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=jakaranda" class="radio-link">
-                            <div class="radio-name">🎵 Jakaranda FM</div>
+                            <div class="radio-name"><span class="icon">&#x266B;</span> Jakaranda FM</div>
                             <div class="radio-description">South African community radio station</div>
                         </a>
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=94.7%20Highveld%20Stereo" class="radio-link">
-                            <div class="radio-name">📡 94.7 Highveld Stereo</div>
+                            <div class="radio-name"><span class="icon">&#x1F4E1;</span> 94.7 Highveld Stereo</div>
                             <div class="radio-description">Johannesburg's hit music station</div>
                         </a>
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=KFM%2094.5" class="radio-link">
-                            <div class="radio-name">🎶 KFM 94.5</div>
+                            <div class="radio-name"><span class="icon">&#x1F3B5;</span> KFM 94.5</div>
                             <div class="radio-description">Cape Town's hit music station</div>
                         </a>
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=Talk%20Radio%20702" class="radio-link">
-                            <div class="radio-name">🗣️ Talk Radio 702</div>
+                            <div class="radio-name"><span class="icon">&#x1F4E2;</span> Talk Radio 702</div>
                             <div class="radio-description">Johannesburg talk radio</div>
                         </a>
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=Sky%20Radio%20Hits" class="radio-link">
-                            <div class="radio-name">☁️ Sky Radio Hits</div>
+                            <div class="radio-name"><span class="icon">&#x2601;</span> Sky Radio Hits</div>
                             <div class="radio-description">International hit music</div>
                         </a>
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=Qmusic%20Non-Stop" class="radio-link">
-                            <div class="radio-name">🎧 Qmusic Non-Stop</div>
+                            <div class="radio-name"><span class="icon">&#x1F3A7;</span> Qmusic Non-Stop</div>
                             <div class="radio-description">Continuous hit music</div>
                         </a>
+                    </div>
+                </div>
+                
+                <div class="features">
+                    <div class="feature-card">
+                        <h3><span class="icon">&#x1F3E0;</span> HOME ASSISTANT</h3>
+                        <p>Control your smart home devices and automations with modern interface support</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3><span class="icon">&#x1F3B5;</span> YOUTUBE MUSIC</h3>
+                        <p>Stream music with full YouTube compatibility - no more "outdated browser" errors!</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3><span class="icon">&#x1F50D;</span> GOOGLE SEARCH</h3>
+                        <p>Search the web with full modern browser support and enhanced performance</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3><span class="icon">&#x1F4FA;</span> YOUTUBE</h3>
+                        <p>Watch videos with improved video codec support and better performance</p>
                     </div>
                 </div>
             </div>
@@ -868,6 +922,51 @@ class KioskBrowser(QMainWindow):
                 
                 // Add some Qt6 feature detection
                 console.log('Qt6 Kiosk Browser loaded successfully');
+                
+                // Check if Unicode icons are displaying properly
+                function checkIconSupport() {
+                    var testIcon = document.createElement('span');
+                    testIcon.innerHTML = '&#x1F4BB;';
+                    testIcon.style.position = 'absolute';
+                    testIcon.style.left = '-9999px';
+                    document.body.appendChild(testIcon);
+                    
+                    // If the icon doesn't render properly, provide fallbacks
+                    var iconWidth = testIcon.offsetWidth;
+                    document.body.removeChild(testIcon);
+                    
+                    if (iconWidth < 10) {
+                        console.log('Unicode icons not supported, using fallbacks');
+                        // Replace icons with text fallbacks
+                        var iconElements = document.querySelectorAll('.icon');
+                        var fallbacks = {
+                            '&#x1F4BB;': '[PC]',
+                            '&#x2728;': '*',
+                            '&#x1F4FB;': '[R]',
+                            '&#x266B;': '♪',
+                            '&#x1F4E1;': '[A]',
+                            '&#x1F3B5;': '♫',
+                            '&#x1F4E2;': '[T]',
+                            '&#x2601;': '[S]',
+                            '&#x1F3A7;': '[Q]',
+                            '&#x1F3E0;': '[H]',
+                            '&#x1F50D;': '[G]',
+                            '&#x1F4FA;': '[Y]'
+                        };
+                        
+                        iconElements.forEach(function(element) {
+                            var originalHTML = element.innerHTML;
+                            var fallback = fallbacks[originalHTML] || '[*]';
+                            element.innerHTML = fallback;
+                            element.className += ' icon-fallback';
+                        });
+                    } else {
+                        console.log('Unicode icons are supported');
+                    }
+                }
+                
+                // Run icon check after a short delay
+                setTimeout(checkIconSupport, 100);
             </script>
         </body>
         </html>
@@ -1330,7 +1429,7 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
             except Exception as e:
                 logging.error(f"Unexpected error during shutdown: {e}")
                 QMessageBox.critical(self, "Error", f"An unexpected error occurred: {e}")
-            
+    
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts"""
         if event.key() == Qt.Key.Key_F11:
@@ -1388,7 +1487,153 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                 logging.info("No existing wvkbd processes found")
         except Exception as e:
             logging.warning(f"Could not clean up keyboard processes: {e}")
-
+    
+    def check_for_updates(self):
+        """Check for updates and show status notification"""
+        if not self.is_raspberry_pi:
+            # Only check for updates on Raspberry Pi
+            return
+            
+        try:
+            # Check if update script exists
+            update_script = os.path.join(os.path.dirname(__file__), "scripts", "update_check.sh")
+            if not os.path.exists(update_script):
+                logging.info("Update script not found, skipping update check")
+                return
+            
+            # Check if we're in a git repository
+            if not os.path.exists(".git"):
+                logging.info("Not in a git repository, skipping update check")
+                return
+            
+            logging.info("Checking for updates in background...")
+            
+            # Run update check in background (non-blocking)
+            # The update_check.sh script will handle automatic updates based on configuration
+            try:
+                # Start the update check process in the background
+                process = subprocess.Popen(
+                    [update_script],
+                    cwd=os.path.dirname(__file__),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                
+                # Use a timer to check the process status after a short delay
+                # This allows the UI to load without blocking
+                from PyQt6.QtCore import QTimer
+                self.update_timer = QTimer()
+                self.update_timer.setSingleShot(True)
+                self.update_timer.timeout.connect(lambda: self.check_update_status(process))
+                self.update_timer.start(2000)  # Check after 2 seconds
+                
+            except Exception as e:
+                logging.error(f"Error starting update check: {e}")
+                
+        except Exception as e:
+            logging.error(f"Error in update check: {e}")
+    
+    def check_update_status(self, process):
+        """Check the status of the update process"""
+        try:
+            # Check if process is still running
+            if process.poll() is None:
+                # Process still running, check again later
+                self.update_timer.start(5000)  # Check again in 5 seconds
+                return
+                
+            # Process completed, get the output
+            stdout, stderr = process.communicate()
+            
+            if process.returncode == 0:
+                # Update check completed successfully
+                output = stdout.strip()
+                if "UPDATES_APPLIED_AUTOMATICALLY" in output or "Updates applied automatically" in output:
+                    self.show_update_notification("Updates have been applied automatically! Application will restart with the new version.", True)
+                elif "Updates are available" in output and "Applying updates automatically" not in output:
+                    self.show_update_notification("Updates are available but auto-apply failed.", False)
+                elif "Already up to date" in output:
+                    logging.info("Application is already up to date")
+                else:
+                    logging.info(f"Update check completed: {output}")
+                    # Check for restart flag file as backup detection
+                    if os.path.exists("/tmp/kiosk-restart-needed"):
+                        self.show_update_notification("Updates have been applied! Application will restart with the new version.", True)
+                        # Clean up the flag file
+                        try:
+                            os.remove("/tmp/kiosk-restart-needed")
+                        except OSError:
+                            pass
+            else:
+                # Update check failed
+                logging.warning(f"Update check failed with return code {process.returncode}")
+                if stderr:
+                    logging.warning(f"Update check error: {stderr}")
+                    
+        except Exception as e:
+            logging.error(f"Error checking update status: {e}")
+    
+    def show_update_notification(self, message, is_critical=False):
+        """Show update notification to user"""
+        try:
+            from PyQt6.QtWidgets import QMessageBox
+            
+            if is_critical:
+                # Critical update notification (auto-restart)
+                msg_box = QMessageBox(self)
+                msg_box.setWindowTitle("Automatic Update Applied")
+                msg_box.setText("Office Kiosk Browser has been updated automatically!")
+                msg_box.setInformativeText(f"{message}\n\nThe application will restart automatically in a few seconds to apply the new version.")
+                msg_box.setIcon(QMessageBox.Icon.Information)
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg_box.show()
+                
+                # Schedule application restart
+                from PyQt6.QtCore import QTimer
+                restart_timer = QTimer()
+                restart_timer.setSingleShot(True)
+                restart_timer.timeout.connect(self.restart_application)
+                restart_timer.start(5000)  # Restart in 5 seconds to give user time to read
+                
+                # Auto-close the dialog after 4 seconds
+                auto_close_timer = QTimer()
+                auto_close_timer.setSingleShot(True)
+                auto_close_timer.timeout.connect(msg_box.accept)
+                auto_close_timer.start(4000)
+                
+            else:
+                # Info notification
+                QMessageBox.information(
+                    self,
+                    "Update Information",
+                    f"{message}\n\nAutomatic updates are enabled. Updates will be applied automatically when the application starts."
+                )
+                
+        except Exception as e:
+            logging.error(f"Error showing update notification: {e}")
+    
+    def restart_application(self):
+        """Restart the application after updates"""
+        try:
+            logging.info("Restarting application after automatic update...")
+            
+            # Close current instance
+            self.close()
+            
+            # Restart using the start script
+            start_script = os.path.join(os.path.dirname(__file__), "scripts", "start_kiosk.sh")
+            if os.path.exists(start_script):
+                subprocess.Popen([start_script], cwd=os.path.dirname(__file__))
+            else:
+                # Fallback to direct Python restart
+                python_executable = sys.executable
+                subprocess.Popen([python_executable, __file__])
+                
+        except Exception as e:
+            logging.error(f"Error restarting application: {e}")
+    
+    # ...existing code...
 def main():
     """Main function to run the application"""
     

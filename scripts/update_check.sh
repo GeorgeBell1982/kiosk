@@ -157,20 +157,25 @@ main() {
     
     # Check for updates
     if check_for_updates; then
-        log_message "Updates found!"
+        log_message "Updates found! Starting automatic update process..."
         
         # Determine if we should apply updates automatically
         if [ "$AUTO_UPDATE_APPLY" = "true" ] || [ ! -t 0 ]; then
             # Apply updates automatically
-            log_message "Auto-applying updates..."
+            log_message "Auto-applying updates (AUTO_UPDATE_APPLY=true, no user interaction)..."
+            echo "Applying updates automatically..."
             if apply_updates; then
                 log_message "Automatic update completed successfully"
                 # Create a flag file to indicate restart is needed
                 touch /tmp/kiosk-restart-needed
                 echo "Updates applied automatically. Application will restart with new version."
+                # Signal that updates were applied (for parent process detection)
+                echo "UPDATES_APPLIED_AUTOMATICALLY"
+                exit 0
             else
                 log_message "Automatic update failed"
                 echo "Automatic update failed. Check logs at $UPDATE_LOG"
+                exit 1
             fi
         else
             # Prompt user for updates

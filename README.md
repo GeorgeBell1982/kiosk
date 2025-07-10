@@ -26,6 +26,24 @@ python3 kiosk_browser.py
 - **Raspberry Pi Ready**: Auto-detects Pi hardware, optimized for 1024x600 displays
 - **Kiosk Mode**: Fullscreen interface with quick shortcuts to common sites
 - **System Integration**: Systemd service, desktop integration, auto-start
+- **Automatic Updates**: Zero-maintenance updates with no user prompts required
+
+## 🔄 Automatic Updates
+
+The Office Kiosk Browser features **fully automatic updates** with no user interaction required:
+
+- ✅ **Zero Maintenance**: Checks and applies updates automatically on startup
+- ✅ **No Prompts**: Updates are applied without any user confirmation
+- ✅ **Auto-Restart**: Application restarts automatically with new version
+- ✅ **Backup & Recovery**: Automatic backups before each update
+
+**Configuration**: Updates are controlled by `scripts/update_config.conf`
+```bash
+AUTO_UPDATE_CHECK=true   # Check for updates on startup
+AUTO_UPDATE_APPLY=true   # Apply updates automatically (no prompts)
+```
+
+For complete details, see: **[🔄 Automatic Updates Guide](docs/AUTOMATIC_UPDATES.md)**
 
 ## 📁 Project Structure
 
