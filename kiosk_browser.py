@@ -741,6 +741,49 @@ class KioskBrowser(QMainWindow):
                     margin-top: 30px;
                     font-weight: bold;
                 }
+                .radio-stations {
+                    margin-top: 40px;
+                    background: rgba(155, 89, 182, 0.1);
+                    border-radius: 15px;
+                    padding: 25px;
+                    border: 1px solid rgba(155, 89, 182, 0.3);
+                }
+                .radio-stations h2 {
+                    color: #a8e6cf;
+                    margin-bottom: 20px;
+                    font-size: 1.8em;
+                }
+                .radio-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                    gap: 15px;
+                    margin-top: 20px;
+                }
+                .radio-link {
+                    background: rgba(155, 89, 182, 0.2);
+                    border: 1px solid rgba(155, 89, 182, 0.4);
+                    border-radius: 10px;
+                    padding: 15px;
+                    text-decoration: none;
+                    color: white;
+                    transition: all 0.3s ease;
+                    display: block;
+                }
+                .radio-link:hover {
+                    background: rgba(155, 89, 182, 0.3);
+                    transform: translateY(-2px);
+                    border-color: rgba(155, 89, 182, 0.6);
+                }
+                .radio-name {
+                    font-weight: bold;
+                    font-size: 1.1em;
+                    margin-bottom: 5px;
+                    color: #a8e6cf;
+                }
+                .radio-description {
+                    font-size: 0.9em;
+                    opacity: 0.8;
+                }
             </style>
         </head>
         <body>
@@ -766,6 +809,37 @@ class KioskBrowser(QMainWindow):
                     <div class="feature-card">
                         <h3>📺 YOUTUBE</h3>
                         <p>Watch videos with improved video codec support and better performance</p>
+                    </div>
+                </div>
+                
+                <div class="radio-stations">
+                    <h2>📻 Radio Stations</h2>
+                    <p style="opacity: 0.8; margin-bottom: 20px;">Quick access to your favorite radio stations</p>
+                    <div class="radio-grid">
+                        <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=jakaranda" class="radio-link">
+                            <div class="radio-name">🎵 Jakaranda FM</div>
+                            <div class="radio-description">South African community radio station</div>
+                        </a>
+                        <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=94.7%20Highveld%20Stereo" class="radio-link">
+                            <div class="radio-name">📡 94.7 Highveld Stereo</div>
+                            <div class="radio-description">Johannesburg's hit music station</div>
+                        </a>
+                        <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=KFM%2094.5" class="radio-link">
+                            <div class="radio-name">🎶 KFM 94.5</div>
+                            <div class="radio-description">Cape Town's hit music station</div>
+                        </a>
+                        <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=Talk%20Radio%20702" class="radio-link">
+                            <div class="radio-name">🗣️ Talk Radio 702</div>
+                            <div class="radio-description">Johannesburg talk radio</div>
+                        </a>
+                        <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=Sky%20Radio%20Hits" class="radio-link">
+                            <div class="radio-name">☁️ Sky Radio Hits</div>
+                            <div class="radio-description">International hit music</div>
+                        </a>
+                        <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=Qmusic%20Non-Stop" class="radio-link">
+                            <div class="radio-name">🎧 Qmusic Non-Stop</div>
+                            <div class="radio-description">Continuous hit music</div>
+                        </a>
                     </div>
                 </div>
             </div>
