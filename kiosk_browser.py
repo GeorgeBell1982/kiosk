@@ -66,6 +66,12 @@ class KioskBrowser(QMainWindow):
     def __init__(self):
         super().__init__()
         
+        # Initialize early attributes first
+        self.web_view = None  # Initialize early
+        self.is_raspberry_pi = self.detect_raspberry_pi()
+        self.keyboard_visible = False  # Track virtual keyboard state
+        self.keyboard_temp_windowed = False  # Track if we temporarily exited fullscreen for keyboard
+        
         # Log version information
         version_info = get_full_version_info()
         logging.info(f"Starting Office Kiosk Browser {version_info['formatted']} - Qt6 Version")
@@ -76,10 +82,6 @@ class KioskBrowser(QMainWindow):
         else:
             logging.info("Running on non-Raspberry Pi system - automatic updates disabled")
         
-        self.web_view = None  # Initialize early
-        self.is_raspberry_pi = self.detect_raspberry_pi()
-        self.keyboard_visible = False  # Track virtual keyboard state
-        self.keyboard_temp_windowed = False  # Track if we temporarily exited fullscreen for keyboard
         self.setup_ui()
         self.setup_web_view()
         self.check_for_updates()  # Check for updates on startup
