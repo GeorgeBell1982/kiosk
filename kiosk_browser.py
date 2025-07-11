@@ -785,17 +785,18 @@ class KioskBrowser(QMainWindow):
                 /* Fallback CSS icons if Unicode doesn't work */
                 .icon-fallback {
                     display: inline-block;
-                    width: 20px;
-                    height: 20px;
+                    min-width: 24px;
+                    height: 24px;
                     margin-right: 8px;
                     background-color: #a8e6cf;
                     border-radius: 50%;
                     vertical-align: middle;
                     text-align: center;
-                    line-height: 20px;
-                    font-size: 12px;
-                    color: #333;
+                    line-height: 24px;
+                    font-size: 10px;
+                    color: #2c3e50;
                     font-weight: bold;
+                    border: 1px solid rgba(255, 255, 255, 0.3);
                 }
                 .radio-stations {
                     margin-top: 40px;
@@ -844,37 +845,37 @@ class KioskBrowser(QMainWindow):
         </head>
         <body>
             <div class="container">
-                <h1><span class="icon">&#x1F4BB;</span> OFFICE KIOSK</h1>
-                <div class="version"><span class="icon">&#x2728;</span> Powered by Qt6 - Modern Web Support <span class="icon">&#x2728;</span></div>
+                <h1><span class="icon" data-fallback="PC">&#x1F4BB;</span> OFFICE KIOSK</h1>
+                <div class="version"><span class="icon" data-fallback="★">&#x2728;</span> Powered by Qt6 - Modern Web Support <span class="icon" data-fallback="★">&#x2728;</span></div>
                 <div class="welcome">Welcome! Use the shortcuts above to navigate to your favorite services.</div>
                 <div class="time" id="current-time"></div>
                 
                 <div class="radio-stations">
-                    <h2><span class="icon">&#x1F4FB;</span> Radio Stations</h2>
+                    <h2><span class="icon" data-fallback="RADIO">&#x1F4FB;</span> Radio Stations</h2>
                     <p style="opacity: 0.8; margin-bottom: 20px;">Quick access to your favorite radio stations</p>
                     <div class="radio-grid">
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=jakaranda" class="radio-link">
-                            <div class="radio-name"><span class="icon">&#x266B;</span> Jakaranda FM</div>
+                            <div class="radio-name"><span class="icon" data-fallback="♪">&#x266B;</span> Jakaranda FM</div>
                             <div class="radio-description">South African community radio station</div>
                         </a>
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=94.7%20Highveld%20Stereo" class="radio-link">
-                            <div class="radio-name"><span class="icon">&#x1F4E1;</span> 94.7 Highveld Stereo</div>
+                            <div class="radio-name"><span class="icon" data-fallback="ANT">&#x1F4E1;</span> 94.7 Highveld Stereo</div>
                             <div class="radio-description">Johannesburg's hit music station</div>
                         </a>
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=KFM%2094.5" class="radio-link">
-                            <div class="radio-name"><span class="icon">&#x1F3B5;</span> KFM 94.5</div>
+                            <div class="radio-name"><span class="icon" data-fallback="♫">&#x1F3B5;</span> KFM 94.5</div>
                             <div class="radio-description">Cape Town's hit music station</div>
                         </a>
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=Talk%20Radio%20702" class="radio-link">
-                            <div class="radio-name"><span class="icon">&#x1F4E2;</span> Talk Radio 702</div>
+                            <div class="radio-name"><span class="icon" data-fallback="TALK">&#x1F4E2;</span> Talk Radio 702</div>
                             <div class="radio-description">Johannesburg talk radio</div>
                         </a>
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=Sky%20Radio%20Hits" class="radio-link">
-                            <div class="radio-name"><span class="icon">&#x2601;</span> Sky Radio Hits</div>
+                            <div class="radio-name"><span class="icon" data-fallback="SKY">&#x2601;</span> Sky Radio Hits</div>
                             <div class="radio-description">International hit music</div>
                         </a>
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=Qmusic%20Non-Stop" class="radio-link">
-                            <div class="radio-name"><span class="icon">&#x1F3A7;</span> Qmusic Non-Stop</div>
+                            <div class="radio-name"><span class="icon" data-fallback="MUS">&#x1F3A7;</span> Qmusic Non-Stop</div>
                             <div class="radio-description">Continuous hit music</div>
                         </a>
                     </div>
@@ -882,19 +883,19 @@ class KioskBrowser(QMainWindow):
                 
                 <div class="features">
                     <div class="feature-card">
-                        <h3><span class="icon">&#x1F3E0;</span> HOME ASSISTANT</h3>
+                        <h3><span class="icon" data-fallback="HOME">&#x1F3E0;</span> HOME ASSISTANT</h3>
                         <p>Control your smart home devices and automations with modern interface support</p>
                     </div>
                     <div class="feature-card">
-                        <h3><span class="icon">&#x1F3B5;</span> YOUTUBE MUSIC</h3>
+                        <h3><span class="icon" data-fallback="♫">&#x1F3B5;</span> YOUTUBE MUSIC</h3>
                         <p>Stream music with full YouTube compatibility - no more "outdated browser" errors!</p>
                     </div>
                     <div class="feature-card">
-                        <h3><span class="icon">&#x1F50D;</span> GOOGLE SEARCH</h3>
+                        <h3><span class="icon" data-fallback="FIND">&#x1F50D;</span> GOOGLE SEARCH</h3>
                         <p>Search the web with full modern browser support and enhanced performance</p>
                     </div>
                     <div class="feature-card">
-                        <h3><span class="icon">&#x1F4FA;</span> YOUTUBE</h3>
+                        <h3><span class="icon" data-fallback="TUBE">&#x1F4FA;</span> YOUTUBE</h3>
                         <p>Watch videos with improved video codec support and better performance</p>
                     </div>
                 </div>
@@ -931,40 +932,33 @@ class KioskBrowser(QMainWindow):
                     testIcon.innerHTML = '&#x1F4BB;';
                     testIcon.style.position = 'absolute';
                     testIcon.style.left = '-9999px';
+                    testIcon.style.fontSize = '16px';
                     document.body.appendChild(testIcon);
                     
-                    // If the icon doesn't render properly, provide fallbacks
-                    var iconWidth = testIcon.offsetWidth;
-                    document.body.removeChild(testIcon);
-                    
-                    if (iconWidth < 10) {
-                        console.log('Unicode icons not supported, using fallbacks');
-                        // Replace icons with text fallbacks
-                        var iconElements = document.querySelectorAll('.icon');
-                        var fallbacks = {
-                            '&#x1F4BB;': '[PC]',
-                            '&#x2728;': '*',
-                            '&#x1F4FB;': '[R]',
-                            '&#x266B;': '♪',
-                            '&#x1F4E1;': '[A]',
-                            '&#x1F3B5;': '♫',
-                            '&#x1F4E2;': '[T]',
-                            '&#x2601;': '[S]',
-                            '&#x1F3A7;': '[Q]',
-                            '&#x1F3E0;': '[H]',
-                            '&#x1F50D;': '[G]',
-                            '&#x1F4FA;': '[Y]'
-                        };
+                    // Wait a moment for the icon to render
+                    setTimeout(function() {
+                        var iconWidth = testIcon.offsetWidth;
+                        document.body.removeChild(testIcon);
                         
-                        iconElements.forEach(function(element) {
-                            var originalHTML = element.innerHTML;
-                            var fallback = fallbacks[originalHTML] || '[*]';
-                            element.innerHTML = fallback;
-                            element.className += ' icon-fallback';
-                        });
-                    } else {
-                        console.log('Unicode icons are supported');
-                    }
+                        // Use a more lenient check - if width is very small or zero, use fallbacks
+                        if (iconWidth < 8) {
+                            console.log('Unicode icons not supported on this system, using text fallbacks');
+                            // Replace icons with fallback text from data-fallback attribute
+                            var iconElements = document.querySelectorAll('.icon');
+                            
+                            iconElements.forEach(function(element) {
+                                var fallback = element.getAttribute('data-fallback');
+                                if (fallback) {
+                                    element.innerHTML = fallback;
+                                    element.className += ' icon-fallback';
+                                    element.style.fontWeight = 'bold';
+                                    element.style.fontSize = '0.9em';
+                                }
+                            });
+                        } else {
+                            console.log('Unicode icons are supported');
+                        }
+                    }, 50);
                 }
                 
                 // Run icon check after a short delay
