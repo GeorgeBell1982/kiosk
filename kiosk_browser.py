@@ -845,6 +845,13 @@ class KioskBrowser(QMainWindow):
                     border-radius: 50%;
                     border: 1px solid rgba(255, 255, 255, 0.3);
                 }
+                .home-icon {
+                    width: 20px;
+                    height: 20px;
+                    margin-right: 8px;
+                    vertical-align: middle;
+                    display: inline-block;
+                }
                 .radio-description {
                     font-size: 0.9em;
                     opacity: 0.8;
@@ -853,13 +860,13 @@ class KioskBrowser(QMainWindow):
         </head>
         <body>
             <div class="container">
-                <h1><span class="icon" data-fallback="PC">&#x1F4BB;</span> OFFICE KIOSK</h1>
-                <div class="version"><span class="icon" data-fallback="★">&#x2728;</span> Powered by Qt6 - Modern Web Support <span class="icon" data-fallback="★">&#x2728;</span></div>
+                <h1><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB4PSIzIiB5PSI0IiB3aWR0aD0iMTgiIGhlaWdodD0iMTIiIHJ4PSIxIiBmaWxsPSIjYThlNmNmIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMSIvPgogIDxyZWN0IHg9IjgiIHk9IjE4IiB3aWR0aD0iOCIgaGVpZ2h0PSIyIiBmaWxsPSIjYThlNmNmIi8+CiAgPHJlY3QgeD0iNiIgeT0iMjAiIHdpZHRoPSIxMiIgaGVpZ2h0PSIxIiBmaWxsPSIjYThlNmNmIi8+Cjwvc3ZnPg==" alt="Computer icon" class="home-icon"> OFFICE KIOSK</h1>
+                <div class="version"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cGF0aCBkPSJNMTIgMkwxNCA4TDIwIDEwTDE0IDEyTDEyIDE4TDEwIDEyTDQgMTBMMTAgOFoiIGZpbGw9IiNmZmQ3MDAiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIwLjUiLz4KICA8Y2lyY2xlIGN4PSIxOCIgY3k9IjYiIHI9IjEiIGZpbGw9IiNmZmQ3MDAiLz4KICA8Y2lyY2xlIGN4PSI2IiBjeT0iMTgiIHI9IjEiIGZpbGw9IiNmZmQ3MDAiLz4KPC9zdmc+" alt="Sparkle icon" class="home-icon"> Powered by Qt6 - Modern Web Support <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cGF0aCBkPSJNMTIgMkwxNCA4TDIwIDEwTDE0IDEyTDEyIDE4TDEwIDEyTDQgMTBMMTAgOFoiIGZpbGw9IiNmZmQ3MDAiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIwLjUiLz4KICA8Y2lyY2xlIGN4PSIxOCIgY3k9IjYiIHI9IjEiIGZpbGw9IiNmZmQ3MDAiLz4KICA8Y2lyY2xlIGN4PSI2IiBjeT0iMTgiIHI9IjEiIGZpbGw9IiNmZmQ3MDAiLz4KPC9zdmc+" alt="Sparkle icon" class="home-icon"></div>
                 <div class="welcome">Welcome! Use the shortcuts above to navigate to your favorite services.</div>
                 <div class="time" id="current-time"></div>
                 
                 <div class="radio-stations">
-                    <h2><span class="icon" data-fallback="RADIO">&#x1F4FB;</span> Radio Stations</h2>
+                    <h2><img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8IS0tIFJhZGlvIGljb24gd2l0aCBhbnRlbm5hIGFuZCBzcGVha2VyIC0tPgogIDxnIGZpbGw9ImN1cnJlbnRDb2xvciI+CiAgICA8IS0tIEFudGVubmEgLS0+CiAgICA8cGF0aCBkPSJNMTIgMkwxMSAzTDEzIDVMMTIgNkw4IDJMNyAzTDExIDdWOC41Ii8+CiAgICA8IS0tIFJhZGlvIGJvZHkgLS0+CiAgICA8cmVjdCB4PSI0IiB5PSI4IiB3aWR0aD0iMTYiIGhlaWdodD0iMTIiIHJ4PSIyIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjUiIGZpbGw9Im5vbmUiLz4KICAgIDwhLS0gU3BlYWtlciBncmlsbCAtLT4KICAgIDxjaXJjbGUgY3g9IjgiIGN5PSIxNCIgcj0iMi41IiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjUiIGZpbGw9Im5vbmUiLz4KICAgIDxjaXJjbGUgY3g9IjgiIGN5PSIxNCIgcj0iMSIgZmlsbD0iY3VycmVudENvbG9yIi8+CiAgICA8IS0tIENvbnRyb2wga25vYnMgLS0+CiAgICA8Y2lyY2xlIGN4PSIxNSIgY3k9IjEyIiByPSIxIiBmaWxsPSJjdXJyZW50Q29sb3IiLz4KICAgIDxjaXJjbGUgY3g9IjE4IiBjeT0iMTIiIHI9IjEiIGZpbGw9ImN1cnJlbnRDb2xvciIvPgogICAgPGNpcmNsZSBjeD0iMTUiIGN5PSIxNiIgcj0iMSIgZmlsbD0iY3VycmVudENvbG9yIi8+CiAgICA8Y2lyY2xlIGN4PSIxOCIgY3k9IjE2IiByPSIxIiBmaWxsPSJjdXJyZW50Q29sb3IiLz4KICAgIDwhLS0gUmFkaW8gd2F2ZXMgLS0+CiAgICA8cGF0aCBkPSJNMjAgMTBDMjEuMSAxMC45IDIxLjEgMTMuMSAyMCAxNCIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIvPgogICAgPHBhdGggZD0iTTIxIDhDMjIuNyA5LjcgMjIuNyAxNC4zIDIxIDE2IiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxIiBmaWxsPSJub25lIi8+CiAgPC9nPgo8L3N2Zz4=" alt="Radio icon" class="home-icon"> Radio Stations</h2>
                     <p style="opacity: 0.8; margin-bottom: 20px;">Quick access to your favorite radio stations</p>
                     <div class="radio-grid">
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=jakaranda" class="radio-link">
@@ -891,19 +898,19 @@ class KioskBrowser(QMainWindow):
                 
                 <div class="features">
                     <div class="feature-card">
-                        <h3><span class="icon" data-fallback="HOME">&#x1F3E0;</span> HOME ASSISTANT</h3>
+                        <h3><img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cGF0aCBkPSJNMTAgMjBWMTRIMTRWMjBIMTlWMTJIMjJMMTIgM0wyIDEySDVWMjBIMTBaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4=" alt="Home icon" class="home-icon"> HOME ASSISTANT</h3>
                         <p>Control your smart home devices and automations with modern interface support</p>
                     </div>
                     <div class="feature-card">
-                        <h3><span class="icon" data-fallback="♫">&#x1F3B5;</span> YOUTUBE MUSIC</h3>
+                        <h3><img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cGF0aCBkPSJNMTIgM0wxMy4wOSA4LjI2TDE4IDlMMTMuMDkgOS43NEwxMiAxNUwxMC45MSA5Ljc0TDYgOUwxMC45MSA4LjI2TDEyIDNaIiBmaWxsPSJ3aGl0ZSIvPgogIDxwYXRoIGQ9Ik0xOS41IDE1LjVMMjAuMzYgMTcuNzJMMjIuNSAxOC41TDIwLjM2IDE5LjI4TDE5LjUgMjEuNUwxOC42NCAxOS4yOEwxNi41IDE4LjVMMTguNjQgMTcuNzJMMTkuNSAxNS41WiIgZmlsbD0id2hpdGUiLz4KICA8cGF0aCBkPSJNNC41IDE1LjVMNS4zNiAxNy43Mkw3LjUgMTguNUw1LjM2IDE5LjI4TDQuNSAyMS41TDMuNjQgMTkuMjhMMS41IDE4LjVMMy42NCAxNy43Mkw0LjUgMTUuNVoiIGZpbGw9IndoaXRlIi8+CiAgPGNpcmNsZSBjeD0iMTIiIGN5PSI5IiByPSIzIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiLz4KPC9zdmc+" alt="Music icon" class="home-icon"> YOUTUBE MUSIC</h3>
                         <p>Stream music with full YouTube compatibility - no more "outdated browser" errors!</p>
                     </div>
                     <div class="feature-card">
-                        <h3><span class="icon" data-fallback="FIND">&#x1F50D;</span> GOOGLE SEARCH</h3>
+                        <h3><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSI2IiBmaWxsPSJub25lIiBzdHJva2U9IiMyN2FlNjAiIHN0cm9rZS13aWR0aD0iMiIvPgogIDxwYXRoIGQ9Ik0yMCAyMEwxNiAxNiIgc3Ryb2tlPSIjMjdhZTYwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4=" alt="Search icon" class="home-icon"> GOOGLE SEARCH</h3>
                         <p>Search the web with full modern browser support and enhanced performance</p>
                     </div>
                     <div class="feature-card">
-                        <h3><span class="icon" data-fallback="TUBE">&#x1F4FA;</span> YOUTUBE</h3>
+                        <h3><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB4PSIyIiB5PSI2IiB3aWR0aD0iMjAiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjYzAzOTJiIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMSIvPgogIDxwYXRoIGQ9Ik0xMCA5TDE1IDEyTDEwIDE1VjlaIiBmaWxsPSIjZmZmIi8+Cjwvc3ZnPg==" alt="Video icon" class="home-icon"> YOUTUBE</h3>
                         <p>Watch videos with improved video codec support and better performance</p>
                     </div>
                 </div>
