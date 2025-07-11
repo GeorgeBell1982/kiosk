@@ -22,6 +22,7 @@ python3 kiosk_browser.py
 
 - **Modern Web Browser**: Full Qt6 WebEngine with YouTube, social media support
 - **Quick Access Shortcuts**: Home Assistant, YouTube Music, Radio Browser, Google, YouTube
+- **Radio Station Icons**: Beautiful custom and official icons for popular radio stations
 - **Touchscreen Optimized**: Large buttons, virtual keyboard, gesture support
 - **Raspberry Pi Ready**: Auto-detects Pi hardware, optimized for 1024x600 displays
 - **Kiosk Mode**: Fullscreen interface with quick shortcuts to common sites
@@ -45,7 +46,26 @@ AUTO_UPDATE_APPLY=true   # Apply updates automatically (no prompts)
 
 For complete details, see: **[🔄 Automatic Updates Guide](docs/AUTOMATIC_UPDATES.md)**
 
-## 📁 Project Structure
+## � Radio Station Icons
+
+The kiosk features **professional radio station icons** with both official and custom designs:
+
+- **Automatic Favicon Fetching**: Downloads official station icons where available
+- **Custom SVG Icons**: Beautiful gradients and radio wave graphics for all stations
+- **Brand Recognition**: Proper station branding improves user experience
+- **Fallback System**: Ensures all stations always have appropriate icons
+
+**Supported Stations:**
+- 🎵 Jakaranda FM (Custom purple/green gradient)
+- 📻 94.7 Highveld Stereo (Custom red/orange gradient)
+- 🎶 KFM 94.5 (Custom blue/green gradient)
+- 🗣️ Talk Radio 702 (Custom dark blue/gray gradient)
+- ☁️ Sky Radio Hits (Official favicon + purple/orange)
+- 🎧 Qmusic Non-Stop (Official favicon + pink/orange)
+
+**Icon Creation**: Use `python scripts/create_radio_icons.py` to regenerate icons
+
+## �📁 Project Structure
 
 ```
 office_kiosk/
