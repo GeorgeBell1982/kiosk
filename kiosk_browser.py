@@ -837,6 +837,14 @@ class KioskBrowser(QMainWindow):
                     margin-bottom: 5px;
                     color: #a8e6cf;
                 }
+                .radio-icon {
+                    width: 24px;
+                    height: 24px;
+                    margin-right: 8px;
+                    vertical-align: middle;
+                    border-radius: 50%;
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                }
                 .radio-description {
                     font-size: 0.9em;
                     opacity: 0.8;
@@ -855,27 +863,27 @@ class KioskBrowser(QMainWindow):
                     <p style="opacity: 0.8; margin-bottom: 20px;">Quick access to your favorite radio stations</p>
                     <div class="radio-grid">
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=jakaranda" class="radio-link">
-                            <div class="radio-name"><span class="icon" data-fallback="♪">&#x266B;</span> Jakaranda FM</div>
+                            <div class="radio-name"><img src="icons/radio-jakaranda.svg" alt="Jakaranda FM" class="radio-icon"> Jakaranda FM</div>
                             <div class="radio-description">South African community radio station</div>
                         </a>
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=94.7%20Highveld%20Stereo" class="radio-link">
-                            <div class="radio-name"><span class="icon" data-fallback="ANT">&#x1F4E1;</span> 94.7 Highveld Stereo</div>
+                            <div class="radio-name"><img src="icons/radio-947.svg" alt="94.7 Highveld Stereo" class="radio-icon"> 94.7 Highveld Stereo</div>
                             <div class="radio-description">Johannesburg's hit music station</div>
                         </a>
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=KFM%2094.5" class="radio-link">
-                            <div class="radio-name"><span class="icon" data-fallback="♫">&#x1F3B5;</span> KFM 94.5</div>
+                            <div class="radio-name"><img src="icons/radio-kfm.svg" alt="KFM 94.5" class="radio-icon"> KFM 94.5</div>
                             <div class="radio-description">Cape Town's hit music station</div>
                         </a>
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=Talk%20Radio%20702" class="radio-link">
-                            <div class="radio-name"><span class="icon" data-fallback="TALK">&#x1F4E2;</span> Talk Radio 702</div>
+                            <div class="radio-name"><img src="icons/radio-702.svg" alt="Talk Radio 702" class="radio-icon"> Talk Radio 702</div>
                             <div class="radio-description">Johannesburg talk radio</div>
                         </a>
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=Sky%20Radio%20Hits" class="radio-link">
-                            <div class="radio-name"><span class="icon" data-fallback="SKY">&#x2601;</span> Sky Radio Hits</div>
+                            <div class="radio-name"><img src="icons/radio-sky.svg" alt="Sky Radio Hits" class="radio-icon"> Sky Radio Hits</div>
                             <div class="radio-description">International hit music</div>
                         </a>
                         <a href="https://www.radio-browser.info/search?page=1&order=clickcount&reverse=true&hidebroken=true&name=Qmusic%20Non-Stop" class="radio-link">
-                            <div class="radio-name"><span class="icon" data-fallback="MUS">&#x1F3A7;</span> Qmusic Non-Stop</div>
+                            <div class="radio-name"><img src="icons/radio-qmusic.svg" alt="Qmusic Non-Stop" class="radio-icon"> Qmusic Non-Stop</div>
                             <div class="radio-description">Continuous hit music</div>
                         </a>
                     </div>
