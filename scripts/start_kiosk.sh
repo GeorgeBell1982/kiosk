@@ -38,7 +38,7 @@ if grep -q "Raspberry Pi" /proc/cpuinfo 2>/dev/null; then
     export QT_SCREEN_SCALE_FACTORS=""
     
     # Force hardware acceleration and disable problematic features
-    export QTWEBENGINE_CHROMIUM_FLAGS="--disable-gpu-sandbox --disable-software-rasterizer --enable-gpu-rasterization --ignore-gpu-blacklist --disable-dev-shm-usage"
+    export QTWEBENGINE_CHROMIUM_FLAGS="--disable-software-rasterizer --enable-gpu-rasterization --ignore-gpu-blacklist --disable-dev-shm-usage"
     
     # Disable EGL warnings
     export EGL_LOG_LEVEL=fatal

@@ -4,6 +4,19 @@ Verification and testing utilities for the Office Kiosk Browser.
 
 ## Available Tests
 
+### `test_reliability.py`
+Automated headless regression tests for persistent browser profiles, browser
+security settings, blocked local-file reads, navigation to local HTTP services,
+update restart timers, and update checks launched outside the project directory.
+Separate-process tests cover competing launches, crash recovery, lock failures,
+and release of the profile lock before restarting.
+Requires PyQt6 and PyQt6-WebEngine; the update-script test also requires Bash
+(Git for Windows is supported). External update actions are stubbed.
+
+```bash
+python -m unittest discover -s tests -p test_reliability.py -v
+```
+
 ### `test_qt_version.py`
 Tests Qt6 installation and reports version information.
 ```bash

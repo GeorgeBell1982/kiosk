@@ -129,6 +129,29 @@ If you see multiple browser windows opening:
 - **Display**: Any resolution, optimized for 1024x600 touchscreens
 - **Python**: 3.9+ with PyQt6, PyQt6-WebEngine, PyQt6-Svg
 
+## Browser security and single-instance startup
+
+The Qt6 browser blocks mixed-content execution, local-document access to other
+files or remote resources, automatic JavaScript popups, and direct JavaScript
+clipboard access. JavaScript and persistent login storage remain enabled.
+Plain HTTP navigation to local services such as Home Assistant is supported;
+local-network WebRTC remains enabled for camera streams.
+
+The supplied startup and graphics scripts keep Chromium sandboxing enabled.
+Run the browser as a regular desktop user. On Linux, sandbox support depends on
+the kernel and distribution configuration; see the
+[Qt platform notes](https://doc.qt.io/qt-6/qtwebengine-platform-notes.html#sandboxing-support).
+Existing custom Chromium environment flags are still respected by the Python
+entry point; remove old sandbox or web-security overrides from custom launchers.
+
+One Qt6 browser instance per user is enforced through
+`~/.office_kiosk_data/instance.lock`, shared across working directories and
+repository copies. A second launch exits successfully without opening a window.
+Lock or profile-directory errors stop startup with a nonzero exit code. Qt
+recovers locks left by crashed processes automatically; do not delete a live
+instance's lock file. Automatic restarts release the lock before relaunching
+with the same Python interpreter and application arguments.
+
 ## � Autostart Setup
 
 To automatically start the kiosk browser on boot:

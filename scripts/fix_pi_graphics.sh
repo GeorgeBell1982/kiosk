@@ -92,7 +92,7 @@ fi
 echo "Adding Chromium flags for better performance..."
 sudo tee "$CHROMIUM_FLAGS" > /dev/null << 'EOF'
 # Chromium flags for Raspberry Pi kiosk
-CHROMIUM_FLAGS="--disable-gpu-sandbox --disable-software-rasterizer --enable-gpu-rasterization --ignore-gpu-blacklist --disable-dev-shm-usage --disable-web-security --allow-running-insecure-content --no-sandbox"
+CHROMIUM_FLAGS="--disable-software-rasterizer --enable-gpu-rasterization --ignore-gpu-blacklist --disable-dev-shm-usage"
 EOF
 
 echo

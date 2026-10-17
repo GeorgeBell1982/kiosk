@@ -6,9 +6,10 @@ REPO_URL="https://github.com/GeorgeBell1982/kiosk.git"
 UPDATE_LOG="/var/log/kiosk-update.log"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/update_config.conf"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Change to script directory to ensure we're in the right place
-cd "$SCRIPT_DIR"
+# Run repository operations from the project root
+cd "$PROJECT_DIR" || exit 1
 
 # Default configuration
 AUTO_UPDATE_CHECK=true
@@ -37,7 +38,7 @@ check_internet() {
 
 # Function to check for updates
 check_for_updates() {
-    cd "$SCRIPT_DIR"
+    cd "$PROJECT_DIR" || exit 1
     
     log_message "Checking for updates..."
     
@@ -66,36 +67,9 @@ check_for_updates() {
     fi
 }
 
-# Function to update version number
-update_version() {
-    cd "$SCRIPT_DIR"
-    
-    if [ -f "version.py" ]; then
-        # Get current version
-        CURRENT_VERSION=$(python3 -c "import version; print(version.__version__)" 2>/dev/null || echo "1.0.0")
-        
-        # Extract version components
-        IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
-        
-        # Increment patch version
-        patch=$((patch + 1))
-        NEW_VERSION="$major.$minor.$patch"
-        
-        # Update version file
-        sed -i "s/__version__ = \".*\"/__version__ = \"$NEW_VERSION\"/" version.py
-        sed -i "s/__build_date__ = \".*\"/__build_date__ = \"$(date +%Y-%m-%d)\"/" version.py
-        
-        log_message "Version updated from $CURRENT_VERSION to $NEW_VERSION"
-        return 0
-    else
-        log_message "Version file not found, skipping version update"
-        return 1
-    fi
-}
-
 # Function to apply updates
 apply_updates() {
-    cd "$SCRIPT_DIR"
+    cd "$PROJECT_DIR" || exit 1
     
     log_message "Applying updates..."
     
@@ -106,16 +80,11 @@ apply_updates() {
     log_message "Backup created at $BACKUP_DIR"
     
     # Pull updates
-    if git pull origin main; then
+    if git pull --ff-only origin main; then
         log_message "Updates applied successfully"
         
-        # Update version number
-        update_version
-        
         # Make scripts executable
-        chmod +x start_kiosk.sh
-        chmod +x install_rpi.sh
-        chmod +x update_check.sh
+        chmod +x scripts/*.sh install/*.sh
         
         # Update Python dependencies if requirements.txt changed
         if git diff HEAD~1 HEAD --name-only | grep -q "requirements.txt"; then

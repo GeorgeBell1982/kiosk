@@ -1,5 +1,15 @@
 # Office Kiosk Browser - Troubleshooting Multiple Instances
 
+The current Qt6 application uses `~/.office_kiosk_data/instance.lock` to allow
+one browser instance per user, regardless of the launching directory. Duplicate
+launches exit without opening a second window, and locks left by crashed
+processes are recovered automatically. Do not delete the lock while the browser
+is running. If startup reports that the profile cannot be locked, check that
+the profile directory is writable by the desktop user.
+
+The steps below remain useful for removing redundant launchers and diagnosing
+older versions that do not use this lock.
+
 ## Problem: Multiple Browser Windows Opening
 
 If you're seeing multiple browser windows or instances of the Office Kiosk Browser, this is caused by having multiple autostart methods enabled simultaneously.

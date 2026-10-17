@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout
 # Try to import WebEngine
 try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
-    from PyQt6.QtWebEngineCore import QWebEngineSettings, QWebEngineProfile
+    from PyQt6.QtWebEngineCore import QWebEngineSettings, QWebEngineProfile, QWebEnginePage
     WEBENGINE_AVAILABLE = True
     logging.info("Using Qt6 QtWebEngine for web rendering")
 except ImportError:
@@ -43,7 +43,7 @@ except ImportError:
     class QWebEngineProfile:
         pass
 
-from PyQt6.QtCore import QUrl, Qt, QSize, QTimer
+from PyQt6.QtCore import QUrl, Qt, QSize, QTimer, QLockFile
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QPainter
 from PyQt6.QtSvgWidgets import QSvgWidget
 
@@ -87,7 +87,8 @@ class KioskBrowser(QMainWindow):
         self.check_for_updates()  # Check for updates on startup
         self.load_home_page()
         
-    def detect_raspberry_pi(self):
+    @staticmethod
+    def detect_raspberry_pi():
         """Detect if running on Raspberry Pi"""
         try:
             with open('/proc/cpuinfo', 'r') as f:
@@ -123,6 +124,9 @@ class KioskBrowser(QMainWindow):
         # Create web view first
         if WEBENGINE_AVAILABLE:
             self.web_view = QWebEngineView()
+            # A named profile is required for cookies and storage to survive restarts.
+            self.web_profile = QWebEngineProfile("office-kiosk", self.web_view)
+            self.web_view.setPage(QWebEnginePage(self.web_profile, self.web_view))
         else:
             self.web_view = QWebEngineView()  # Placeholder when WebEngine not available
             # Show error message
@@ -588,26 +592,26 @@ class KioskBrowser(QMainWindow):
         # Qt6 WebEngine has better modern web support by default
         settings = self.web_view.settings()
         
-        # Enhanced settings for Qt6 with persistent storage
-        settings.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
+        # Keep web isolation enabled; the embedded home page needs no local resource access.
+        settings.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, False)
         settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, False)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, False)
         settings.setAttribute(QWebEngineSettings.WebAttribute.ErrorPageEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.ShowScrollBars, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.AllowRunningInsecureContent, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.AllowRunningInsecureContent, False)
         settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.FullScreenSupportEnabled, True)
         
-        # Additional storage settings for login persistence
+        # Load normal page resources without granting popup or clipboard access.
         settings.setAttribute(QWebEngineSettings.WebAttribute.AutoLoadImages, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, False)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, False)
         
-        # Critical settings for Home Assistant and modern web apps
-        settings.setAttribute(QWebEngineSettings.WebAttribute.AllowWindowActivationFromJavaScript, True)
+        # Preserve media playback and local-network WebRTC for Home Assistant cameras.
+        settings.setAttribute(QWebEngineSettings.WebAttribute.AllowWindowActivationFromJavaScript, False)
         settings.setAttribute(QWebEngineSettings.WebAttribute.PlaybackRequiresUserGesture, False)
         settings.setAttribute(QWebEngineSettings.WebAttribute.WebRTCPublicInterfacesOnly, False)
         
@@ -1527,7 +1531,7 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                 return
             
             # Check if we're in a git repository
-            if not os.path.exists(".git"):
+            if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".git")):
                 logging.info("Not in a git repository, skipping update check")
                 return
             
@@ -1616,16 +1620,11 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                 
                 # Schedule application restart
                 from PyQt6.QtCore import QTimer
-                restart_timer = QTimer()
-                restart_timer.setSingleShot(True)
-                restart_timer.timeout.connect(self.restart_application)
-                restart_timer.start(5000)  # Restart in 5 seconds to give user time to read
-                
-                # Auto-close the dialog after 4 seconds
-                auto_close_timer = QTimer()
-                auto_close_timer.setSingleShot(True)
-                auto_close_timer.timeout.connect(msg_box.accept)
-                auto_close_timer.start(4000)
+                QTimer.singleShot(5000, self.restart_application)
+
+                # Keep the non-modal dialog alive until it closes.
+                msg_box.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+                QTimer.singleShot(4000, msg_box.accept)
                 
             else:
                 # Info notification
@@ -1639,63 +1638,31 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
             logging.error(f"Error showing update notification: {e}")
     
     def restart_application(self):
-        """Restart the application after updates"""
-        try:
-            logging.info("Restarting application after automatic update...")
-            
-            # Close current instance
-            self.close()
-            
-            # Restart using the start script
-            start_script = os.path.join(os.path.dirname(__file__), "scripts", "start_kiosk.sh")
-            if os.path.exists(start_script):
-                subprocess.Popen([start_script], cwd=os.path.dirname(__file__))
-            else:
-                # Fallback to direct Python restart
-                python_executable = sys.executable
-                subprocess.Popen([python_executable, __file__])
-                
-        except Exception as e:
-            logging.error(f"Error restarting application: {e}")
-    
-    # ...existing code...
+        """Request a restart after the event loop and profile lock are released."""
+        logging.info("Restarting application after automatic update...")
+        app = QApplication.instance()
+        app.setProperty("restartRequested", True)
+        self.close()
+        app.quit()
+
+
+def acquire_instance_lock():
+    """Protect this user's browser profile for the lifetime of the application."""
+    data_dir = os.path.expanduser("~/.office_kiosk_data")
+    os.makedirs(data_dir, mode=0o700, exist_ok=True)
+    lock = QLockFile(os.path.join(data_dir, "instance.lock"))
+    # A kiosk can run indefinitely. Only a dead owner should make its lock stale.
+    lock.setStaleLockTime(0)
+    if lock.tryLock(0):
+        return lock
+    if lock.error() == QLockFile.LockError.LockFailedError:
+        logging.info("Office Kiosk Browser is already running for this user.")
+        return None
+    raise OSError(f"Cannot lock the browser profile: {lock.error().name}")
+
+
 def main():
     """Main function to run the application"""
-    
-    # Better single-instance check using process name matching
-    current_pid = os.getpid()
-    script_name = "kiosk_browser.py"
-    
-    try:
-        if os.name == 'nt':  # Windows
-            result = subprocess.run(['wmic', 'process', 'where', f'name="python.exe"', 'get', 'ProcessId,CommandLine'], 
-                                  capture_output=True, text=True)
-            lines = result.stdout.split('\n')
-            for line in lines:
-                if script_name in line and 'ProcessId' not in line:
-                    # Extract PID from the line
-                    parts = line.strip().split()
-                    if parts:
-                        try:
-                            pid = int(parts[-1])
-                            if pid != current_pid:
-                                print("Office Kiosk Browser is already running.")
-                                print("Only one instance is allowed. Exiting.")
-                                sys.exit(0)
-                        except (ValueError, IndexError):
-                            continue
-        else:  # Unix/Linux
-            result = subprocess.run(['pgrep', '-f', script_name], capture_output=True, text=True)
-            if result.returncode == 0:
-                pids = [int(pid.strip()) for pid in result.stdout.strip().split('\n') if pid.strip().isdigit()]
-                other_pids = [pid for pid in pids if pid != current_pid]
-                if other_pids:
-                    print(f"Office Kiosk Browser is already running (PIDs: {other_pids}).")
-                    print("Only one instance is allowed. Exiting.")
-                    sys.exit(0)
-    except Exception as e:
-        logging.warning(f"Could not check for existing instances: {e}")
-        # Continue anyway - single instance check is just a safety feature
     
     # Set Qt application attributes before creating QApplication
     # Note: In Qt6, high DPI scaling is enabled by default
@@ -1711,17 +1678,14 @@ def main():
         pass
     
     # For Raspberry Pi, add specific attributes
-    is_rpi = 'raspberry' in os.uname().machine.lower() if hasattr(os, 'uname') else False
+    is_rpi = KioskBrowser.detect_raspberry_pi()
     if is_rpi:
         # Qt6 WebEngine flags for better YouTube compatibility
         chromium_flags = [
-            '--disable-gpu-sandbox',
             '--disable-software-rasterizer',
             '--enable-gpu-rasterization',
             '--ignore-gpu-blacklist',
             '--disable-dev-shm-usage',
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
             '--enable-features=VaapiVideoDecoder',
             '--use-gl=egl',
             '--enable-accelerated-video-decode',
@@ -1734,6 +1698,32 @@ def main():
         os.environ.setdefault('QTWEBENGINE_CHROMIUM_FLAGS', 
             '--enable-features=VaapiVideoDecoder --enable-accelerated-video-decode')
     
+    try:
+        instance_lock = acquire_instance_lock()
+    except OSError as error:
+        logging.error("Cannot start Office Kiosk Browser: %s", error)
+        return 1
+    if instance_lock is None:
+        return 0
+
+    try:
+        exit_code, restart_requested = run_application(is_rpi)
+    finally:
+        instance_lock.unlock()
+
+    if restart_requested:
+        # Replace this process only after Qt shutdown has released the profile lock.
+        # Preserve the interpreter and command-line options on every platform.
+        try:
+            os.execv(sys.executable, [sys.executable, os.path.abspath(__file__), *sys.argv[1:]])
+        except OSError:
+            logging.exception("Could not restart Office Kiosk Browser")
+            return 1
+    return exit_code
+
+
+def run_application(is_rpi):
+    """Run Qt while main() holds the profile lock, then return the restart request."""
     app = QApplication(sys.argv)
     
     # Set application properties for better Qt6 WebEngine storage identification
@@ -1777,7 +1767,8 @@ def main():
         logging.info("Started in windowed mode")
     
     # Start the application
-    sys.exit(app.exec())
+    exit_code = app.exec()
+    return exit_code, bool(app.property("restartRequested"))
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
