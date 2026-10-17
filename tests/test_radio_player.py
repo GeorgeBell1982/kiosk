@@ -172,6 +172,53 @@ class RadioTests(unittest.TestCase):
                                 "return r.height >= 44 && r.left >= 0 && r.right <= innerWidth; })"))
         self.assertTrue(self.js("document.documentElement.scrollWidth <= innerWidth"))
 
+    def test_home_station_buttons_fit_without_scrolling(self):
+        from radio_player import HOME_URL, radio_home_html
+        self.view.setHtml(radio_home_html(), QUrl(HOME_URL))
+        self.wait_until(lambda: self.js("document.querySelectorAll('nav a').length === 7"))
+        self.wait_until(lambda: self.js("[...document.querySelectorAll('nav img')].length === 7 && "
+                                       "[...document.querySelectorAll('nav img')].every(img => "
+                                       "img.complete && img.naturalWidth > 0)"))
+        for width, height in ((1000, 350), (776, 350), (340, 400)):
+            with self.subTest(size=(width, height)):
+                self.view.resize(width, height)
+                self.view.show()
+                self.app.processEvents()
+                self.assertTrue(self.js("[...document.querySelectorAll('nav a')].every(b => {"
+                                        "const r = b.getBoundingClientRect();"
+                                        "return r.height >= 44 && r.left >= 0 && r.top >= 0 && "
+                                        "r.right <= innerWidth && r.bottom <= innerHeight; })"))
+                self.assertTrue(self.js("document.documentElement.scrollWidth <= innerWidth && "
+                                        "document.documentElement.scrollHeight <= innerHeight"))
+
+    def test_home_station_click_starts_player_and_keeps_home_visible(self):
+        from radio_player import HOME_URL
+        with tempfile.TemporaryDirectory() as storage:
+            with patch("kiosk_browser.os.path.expanduser", return_value=storage), \
+                    patch.object(KioskBrowser, "check_for_updates"):
+                browser = KioskBrowser()
+            try:
+                self.wait_until(lambda: self.js("document.querySelectorAll('nav a').length === 7",
+                                                browser.web_view))
+                with patch("radio_player.radio_html", return_value=radio_html().replace(
+                        '"use strict";', HARNESS + '\n"use strict";')):
+                    self.js("document.querySelectorAll('nav a')[4].click()", browser.web_view)
+                    self.wait_until(lambda: browser.radio_dialog is not None)
+                dialog = browser.radio_dialog
+                self.wait_until(lambda: self.js("typeof wanted !== 'undefined' && wanted", dialog.view))
+                self.assertEqual(self.js("audio.src", dialog.view), STATIONS[4]["url"])
+                self.assertEqual(browser.web_view.url(), QUrl(HOME_URL))
+                dialog.hide()
+                self.js("document.querySelectorAll('nav a')[1].click()", browser.web_view)
+                self.wait_until(lambda: self.js("selected === 1 && wanted", dialog.view))
+                self.assertIs(browser.radio_dialog, dialog)
+            finally:
+                browser.close()
+                browser.deleteLater()
+                loop = QEventLoop()
+                QTimer.singleShot(100, loop.quit)
+                loop.exec()
+
     def test_dialog_reused_navigation_unaffected_and_shutdown_muted(self):
         with tempfile.TemporaryDirectory() as storage:
             with patch("kiosk_browser.os.path.expanduser", return_value=storage), \

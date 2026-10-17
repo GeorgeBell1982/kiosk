@@ -1,6 +1,8 @@
 """Self-contained radio panel using the already installed WebEngine audio support."""
 
+import base64
 import json
+from html import escape
 from pathlib import Path
 
 from PyQt6.QtCore import QUrl
@@ -12,12 +14,32 @@ from PyQt6.QtWebEngineCore import QWebEngineSettings
 # Public broadcaster streams. Use the provider redirect service rather than
 # pinning a particular CDN server, which can change without notice.
 STATIONS = [
-    {"name": "Jacaranda FM", "url": "https://live.jacarandafm.com/jacarandahigh.mp3"},
-    {"name": "947", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/FM947.mp3"},
-    {"name": "Kfm 94.5", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/KFM.mp3"},
-    {"name": "702", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/FM702.mp3"},
-    {"name": "HOT 102.7 FM", "url": "https://edge.iono.fm/xice/57_high.mp3"},
+    {"name": "Jacaranda FM", "icon": "radio-jacaranda.png", "url": "https://live.jacarandafm.com/jacarandahigh.mp3"},
+    {"name": "947", "icon": "radio-947.png", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/FM947.mp3"},
+    {"name": "Kfm 94.5", "icon": "radio-kfm.png", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/KFM.mp3"},
+    {"name": "702", "icon": "radio-702.png", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/FM702.mp3"},
+    {"name": "HOT 102.7 FM", "icon": "radio-hot.png", "url": "https://edge.iono.fm/xice/57_high.mp3"},
 ]
+
+
+HOME_URL = "https://home.office-kiosk.invalid/"
+
+
+def radio_home_html():
+    def icon(filename):
+        path = Path(__file__).with_name("icons") / filename
+        mime = "image/svg+xml" if path.suffix == ".svg" else "image/png"
+        data = base64.b64encode(path.read_bytes()).decode("ascii")
+        return f'<img class="station-icon" src="data:{mime};base64,{data}" alt="">'
+
+    buttons = "\n".join(
+        f'<a href="#station/{index}">{icon(station["icon"])}'
+        f'<span>{escape(station["name"])}</span></a>'
+        for index, station in enumerate(STATIONS))
+    return (Path(__file__).with_name("radio_home.html").read_text(encoding="utf-8")
+            .replace("<!-- STATIONS -->", buttons)
+            .replace("<!-- SKY_ICON -->", icon("radio-sky.svg"))
+            .replace("<!-- QMUSIC_ICON -->", icon("radio-qmusic.svg")))
 
 
 def radio_html():
@@ -42,6 +64,9 @@ class RadioDialog(QDialog):
             settings.setAttribute(getattr(QWebEngineSettings.WebAttribute, name), False)
         settings.setAttribute(QWebEngineSettings.WebAttribute.PlaybackRequiresUserGesture, False)
         self.view.page().setBackgroundColor(parent.palette().window().color())
+        self._ready = False
+        self._pending_station = None
+        self.view.loadFinished.connect(self._on_loaded)
         # A synthetic HTTPS origin lets this isolated page play HTTPS media
         # without granting the browser's local documents remote access.
         self.view.setHtml(radio_html(), QUrl("https://radio.office-kiosk.invalid/"))
@@ -51,7 +76,22 @@ class RadioDialog(QDialog):
         hide.clicked.connect(self.hide)
         layout.addWidget(hide)
 
+    def play_station(self, index):
+        if not 0 <= index < len(STATIONS):
+            raise ValueError("Unknown radio station")
+        self._pending_station = index
+        if self._ready:
+            self._on_loaded(True)
+
+    def _on_loaded(self, ok):
+        self._ready = ok
+        if ok and self._pending_station is not None:
+            index = self._pending_station
+            self._pending_station = None
+            self.view.page().runJavaScript(f"selectStation({index})")
+
     def shutdown(self):
+        self._pending_station = None
         # Muting is synchronous even if the renderer is busy or unavailable.
         self.view.page().setAudioMuted(True)
         self.view.setHtml("")

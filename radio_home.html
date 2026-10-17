@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>Radio</title>
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body { padding: 12px; background: #243447; font: bold 26px 'Segoe UI', sans-serif; }
+nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px; min-height: calc(100vh - 24px); }
+a { display: flex; align-items: center; justify-content: center;
+    gap: 12px; min-height: 72px; padding: 12px; border: 3px solid transparent;
+    border-radius: 12px; background: #405573; color: white;
+    text-align: center; text-decoration: none; touch-action: manipulation; }
+a:active { background: #6350a3; }
+a:focus-visible { outline: none; border-color: #facc15; }
+.station-icon { width: 64px; height: 64px; flex: 0 0 64px; object-fit: contain;
+                background: #243447; border-radius: 8px; padding: 4px; }
+a span { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+    body { font-size: 18px; padding: 8px; }
+    nav { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+          min-height: calc(100vh - 16px); }
+    a { gap: 8px; padding: 8px; }
+    .station-icon { width: 40px; height: 40px; flex-basis: 40px; padding: 2px; }
+}
+</style>
+</head>
+<body>
+<nav aria-label="Radio stations">
+<!-- STATIONS -->
+<a href="https://www.radio-browser.info/search?page=1&amp;order=clickcount&amp;reverse=true&amp;hidebroken=true&amp;name=Sky%20Radio%20Hits"><!-- SKY_ICON --><span>Sky Radio Hits</span></a>
+<a href="https://www.radio-browser.info/search?page=1&amp;order=clickcount&amp;reverse=true&amp;hidebroken=true&amp;name=Qmusic%20Non-Stop"><!-- QMUSIC_ICON --><span>Qmusic Non-Stop</span></a>
+</nav>
+</body>
+</html>

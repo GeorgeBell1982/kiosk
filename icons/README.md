@@ -50,3 +50,20 @@ The script intelligently falls back to custom designs when official icons aren't
 Icons are loaded automatically by the `load_icon()` method in the main application.
 Radio station icons are displayed via HTML `<img>` tags with CSS styling.
 The icons scale proportionally based on button size for optimal visibility on 1024x600 displays.
+
+## Home-page station logos
+
+The home page embeds these bundled PNG logos as data URLs, so rendering does not
+contact station websites. Names remain visible alongside every logo.
+
+Downloaded from the stations' official sites on 2026-10-17:
+
+- `radio-jacaranda.png`: https://turntable.kagiso.io/images/Jac_Logo.max-140x140.png (Jacaranda website logo)
+- `radio-947.png`: https://www.primediaplus.com/images/logos/logo-947.png
+- `radio-kfm.png`: https://www.primediaplus.com/images/logos/logo-kfm.png
+- `radio-702.png`: https://www.primediaplus.com/images/logos/logo-702.png
+- `radio-hot.png`: https://hot1027.co.za/wp-content/uploads/2025/03/favicon-300x300.png
+
+Sky Radio and Qmusic reuse the embedded favicons in `radio-sky.svg` and
+`radio-qmusic.svg`. The older custom South African SVGs remain for legacy uses.
+Station names and logos belong to their respective owners.
