@@ -7,33 +7,55 @@
 <title>Radio</title>
 <style>
 * { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; }
-body { padding: 12px; background: #243447; font: bold 26px 'Segoe UI', sans-serif; }
-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px; min-height: calc(100vh - 24px); }
-a { display: flex; align-items: center; justify-content: center;
-    gap: 12px; min-height: 72px; padding: 12px; border: 3px solid transparent;
-    border-radius: 12px; background: #405573; color: white;
-    text-align: center; text-decoration: none; touch-action: manipulation; }
-a:active { background: #6350a3; }
-a:focus-visible { outline: none; border-color: #facc15; }
-.station-icon { width: 64px; height: 64px; flex: 0 0 64px; object-fit: contain;
-                background: #243447; border-radius: 8px; padding: 4px; }
-a span { min-width: 0; overflow-wrap: anywhere; }
+html, body { margin: 0; height: 100%; }
+body { padding: 12px; background: #202d3d; font: 600 22px 'Segoe UI', sans-serif; }
+nav { display: flex; flex-direction: column; gap: 16px; height: 100%; }
+.primary { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+           grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 12px; flex: 1; min-height: 0; }
+.primary a { grid-column: span 2; }
+.primary a:nth-child(4) { grid-column: 2 / span 2; }
+.secondary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+             padding-top: 12px; border-top: 1px solid #405064; flex: 0 0 76px; }
+a { position: relative; display: flex; align-items: center; justify-content: flex-start;
+    gap: 14px; min-height: 72px; padding: 12px 30px 12px 14px; border: 2px solid #46596f;
+    border-radius: 16px; background: #34465b; color: #f5f7fb;
+    text-align: left; text-decoration: none; touch-action: manipulation; }
+a:active { background: #435b74; }
+a:focus-visible { outline: 3px solid #facc15; outline-offset: -5px; }
+a.is-playing { border-color: #5ee3be; background: #284b4c; }
+.station-icon { width: 56px; height: 56px; flex: 0 0 56px; object-fit: contain;
+                background: #202d3d; border-radius: 10px; padding: 5px; }
+.station-name { min-width: 0; overflow-wrap: anywhere; }
+.playing-icon { position: absolute; right: 8px; top: 8px; width: 18px; height: 18px;
+                color: #89f0d1; visibility: hidden; }
+a.is-playing .playing-icon { visibility: visible; }
+.secondary a { min-height: 60px; padding: 8px 12px; font-size: 18px; background: #2a3a4d; }
+.secondary .station-icon { width: 36px; height: 36px; flex-basis: 36px; padding: 3px; }
 @media (max-width: 480px) {
-    body { font-size: 18px; padding: 8px; }
-    nav { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
-          min-height: calc(100vh - 16px); }
-    a { gap: 8px; padding: 8px; }
-    .station-icon { width: 40px; height: 40px; flex-basis: 40px; padding: 2px; }
+    body { font-size: 17px; padding: 8px; }
+    nav { gap: 10px; }
+    .primary { grid-template-columns: repeat(4, minmax(0, 1fr));
+               grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .primary a:nth-child(4) { grid-column: span 2; }
+    .primary a:nth-child(5) { grid-column: 2 / span 2; }
+    a { gap: 8px; padding: 8px 20px 8px 8px; border-radius: 12px; }
+    .station-icon { width: 40px; height: 40px; flex-basis: 40px; padding: 3px; }
+    .secondary { gap: 8px; padding-top: 8px; flex-basis: 68px; }
+    .secondary a { font-size: 16px; min-height: 56px; padding: 6px; gap: 6px; }
+    .secondary .station-icon { width: 30px; height: 30px; flex-basis: 30px; padding: 2px; }
+    .playing-icon { width: 14px; height: 14px; right: 4px; top: 4px; }
 }
 </style>
 </head>
 <body>
 <nav aria-label="Radio stations">
+<div class="primary" role="group" aria-label="South African stations">
 <!-- STATIONS -->
-<a href="https://www.radio-browser.info/search?page=1&amp;order=clickcount&amp;reverse=true&amp;hidebroken=true&amp;name=Sky%20Radio%20Hits"><!-- SKY_ICON --><span>Sky Radio Hits</span></a>
-<a href="https://www.radio-browser.info/search?page=1&amp;order=clickcount&amp;reverse=true&amp;hidebroken=true&amp;name=Qmusic%20Non-Stop"><!-- QMUSIC_ICON --><span>Qmusic Non-Stop</span></a>
+</div>
+<div class="secondary" role="group" aria-label="Other radio websites">
+<a href="https://www.radio-browser.info/search?page=1&amp;order=clickcount&amp;reverse=true&amp;hidebroken=true&amp;name=Sky%20Radio%20Hits"><!-- SKY_ICON --><span class="station-name">Sky Radio Hits</span></a>
+<a href="https://www.radio-browser.info/search?page=1&amp;order=clickcount&amp;reverse=true&amp;hidebroken=true&amp;name=Qmusic%20Non-Stop"><!-- QMUSIC_ICON --><span class="station-name">Qmusic Non-Stop</span></a>
+</div>
 </nav>
 </body>
 </html>

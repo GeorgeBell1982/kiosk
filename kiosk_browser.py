@@ -75,6 +75,7 @@ class KioskBrowser(QMainWindow):
         self.keyboard_error = ""
         self.closing = False
         self.radio_dialog = None
+        self.playing_station = -1
         
         # Log version information
         version_info = get_full_version_info()
@@ -702,6 +703,7 @@ class KioskBrowser(QMainWindow):
             self.web_view.loadStarted.connect(self.on_load_started)
         if hasattr(self.web_view, 'loadFinished'):
             self.web_view.loadFinished.connect(self.on_load_finished)
+            self.web_view.loadFinished.connect(self.sync_radio_home)
         if hasattr(self.web_view, 'loadProgress'):
             self.web_view.loadProgress.connect(self.on_load_progress)
         
@@ -714,6 +716,7 @@ class KioskBrowser(QMainWindow):
         if self.radio_dialog is None:
             from radio_player import RadioDialog
             self.radio_dialog = RadioDialog(self)
+            self.radio_dialog.playbackChanged.connect(self.on_radio_playback)
         available = self.screen().availableGeometry()
         self.radio_dialog.resize(min(720, available.width()), min(520, available.height()))
         self.radio_dialog.show()
@@ -724,6 +727,26 @@ class KioskBrowser(QMainWindow):
         self.show_radio()
         if self.radio_dialog is not None:
             self.radio_dialog.play_station(index)
+
+    def on_radio_playback(self, station, playing):
+        self.playing_station = station if playing else -1
+        self.sync_radio_home()
+
+    def sync_radio_home(self, success=True):
+        if self.closing or not success:
+            return
+        from radio_player import HOME_URL
+        if self.web_view.url().adjusted(QUrl.UrlFormattingOption.RemoveFragment) != QUrl(HOME_URL):
+            return
+        self.web_view.page().runJavaScript("""
+            document.querySelectorAll('[data-station]').forEach(button => {
+                const active = Number(button.dataset.station) === %d;
+                button.classList.toggle('is-playing', active);
+                button.setAttribute('aria-current', String(active));
+                const name = button.querySelector('.station-name').textContent;
+                button.setAttribute('aria-label', name + (active ? ' — Playing' : ''));
+            });
+        """ % self.playing_station)
 
     def load_home_page(self):
         """Show station buttons immediately, without a welcome banner or scrolling."""

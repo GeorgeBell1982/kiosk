@@ -190,6 +190,12 @@ class RadioTests(unittest.TestCase):
                                         "r.right <= innerWidth && r.bottom <= innerHeight; })"))
                 self.assertTrue(self.js("document.documentElement.scrollWidth <= innerWidth && "
                                         "document.documentElement.scrollHeight <= innerHeight"))
+                self.assertTrue(self.js("(() => { const tiles = [...document.querySelectorAll('.primary a')];"
+                                        "const first = tiles[0].getBoundingClientRect();"
+                                        "return tiles.every(tile => {const r = tile.getBoundingClientRect();"
+                                        "return Math.abs(r.width-first.width)<1 && Math.abs(r.height-first.height)<1;}); })()"))
+                self.assertTrue(self.js("document.querySelector('.secondary').getBoundingClientRect().top >= "
+                                        "document.querySelector('.primary').getBoundingClientRect().bottom"))
 
     def test_home_station_click_starts_player_and_keeps_home_visible(self):
         from radio_player import HOME_URL
@@ -212,6 +218,22 @@ class RadioTests(unittest.TestCase):
                 self.js("document.querySelectorAll('nav a')[1].click()", browser.web_view)
                 self.wait_until(lambda: self.js("selected === 1 && wanted", dialog.view))
                 self.assertIs(browser.radio_dialog, dialog)
+                self.assertFalse(self.js("!!document.querySelector('.is-playing')", browser.web_view))
+                self.js("audio.emit('playing')", dialog.view)
+                self.wait_until(lambda: self.js("document.querySelector('[data-station=\"1\"]').classList.contains('is-playing')",
+                                                browser.web_view))
+                self.assertIn("Playing", self.js("document.querySelector('.is-playing').getAttribute('aria-label')",
+                                                browser.web_view))
+                self.js("audio.emit('waiting')", dialog.view)
+                self.wait_until(lambda: not self.js("!!document.querySelector('.is-playing')", browser.web_view))
+                self.js("audio.emit('playing')", dialog.view)
+                self.wait_until(lambda: self.js("!!document.querySelector('.is-playing')", browser.web_view))
+                browser.web_view.setHtml("<p>Another browser page</p>")
+                self.wait_until(lambda: self.js("document.body.textContent.includes('Another browser page')", browser.web_view))
+                browser.load_home_page()
+                self.wait_until(lambda: self.js("!!document.querySelector('.is-playing')", browser.web_view))
+                self.js("stopRadio()", dialog.view)
+                self.wait_until(lambda: not self.js("!!document.querySelector('.is-playing')", browser.web_view))
             finally:
                 browser.close()
                 browser.deleteLater()
@@ -241,6 +263,7 @@ class RadioTests(unittest.TestCase):
                 self.assertTrue(self.js("wanted && audio === instances[0]", dialog.view))
                 browser.close()
                 self.assertTrue(dialog.view.page().isAudioMuted())
+                self.assertFalse(dialog._state_timer.isActive())
             finally:
                 browser.close()
                 browser.deleteLater()

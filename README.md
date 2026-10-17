@@ -59,6 +59,8 @@ For complete details, see: **[🔄 Automatic Updates Guide](docs/AUTOMATIC_UPDAT
 
 Tap a station on the home page to listen, or open **RADIO** in the toolbar. The built-in panel
 includes Jacaranda FM, 947, Kfm 94.5, 702 and HOT 102.7 FM.
+The home page uses matching station tiles, with other radio websites in a smaller
+bottom row. A green border and speaker symbol show which station is playing.
 **Play** starts the selected station; **Stop** cancels playback and all reconnect
 attempts. Volume applies to the radio only. Playback starts only after a tap.
 

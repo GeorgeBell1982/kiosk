@@ -5,6 +5,7 @@
 let selected = 0;
 let wanted = false;
 let audio = null;
+let isPlaying = false;
 let retryTimer = null;
 let watchdog = null;
 let failures = 0;
@@ -33,6 +34,7 @@ function updateControls() {
 }
 
 function releaseAudio() {
+    isPlaying = false;
     clearInterval(watchdog);
     watchdog = null;
     const previous = audio;
@@ -85,6 +87,7 @@ function connect() {
     const isCurrent = () => wanted && audio === current;
     current.addEventListener("playing", () => {
         if (!isCurrent()) return;
+        isPlaying = true;
         playingSince = Date.now();
         status.textContent = "Playing — " + stations[selected].name;
     });
@@ -96,7 +99,10 @@ function connect() {
         if (playingSince && Date.now() - playingSince >= 15000) failures = 0;
     });
     current.addEventListener("waiting", () => {
-        if (isCurrent()) status.textContent = "Buffering — " + stations[selected].name;
+        if (isCurrent()) {
+            isPlaying = false;
+            status.textContent = "Buffering — " + stations[selected].name;
+        }
     });
     current.addEventListener("error", () => {
         if (!isCurrent()) return;

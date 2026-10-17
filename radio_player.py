@@ -5,7 +5,7 @@ import json
 from html import escape
 from pathlib import Path
 
-from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import QUrl, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QDialog, QPushButton, QVBoxLayout
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings
@@ -33,8 +33,12 @@ def radio_home_html():
         return f'<img class="station-icon" src="data:{mime};base64,{data}" alt="">'
 
     buttons = "\n".join(
-        f'<a href="#station/{index}">{icon(station["icon"])}'
-        f'<span>{escape(station["name"])}</span></a>'
+        f'<a href="#station/{index}" data-station="{index}">{icon(station["icon"])}'
+        f'<span class="station-name">{escape(station["name"])}</span>'
+        '<svg class="playing-icon" viewBox="0 0 24 24" aria-hidden="true">'
+        '<path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/>'
+        '<path d="M16 8q4 4 0 8m3-11q7 7 0 14" fill="none" '
+        'stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></a>'
         for index, station in enumerate(STATIONS))
     return (Path(__file__).with_name("radio_home.html").read_text(encoding="utf-8")
             .replace("<!-- STATIONS -->", buttons)
@@ -52,6 +56,8 @@ def radio_html():
 class RadioDialog(QDialog):
     """Hiding the panel preserves playback; shutting down releases its page."""
 
+    playbackChanged = pyqtSignal(int, bool)
+
     def __init__(self, parent):
         super().__init__(parent)
         self.setWindowTitle("South African Radio")
@@ -66,6 +72,11 @@ class RadioDialog(QDialog):
         self.view.page().setBackgroundColor(parent.palette().window().color())
         self._ready = False
         self._pending_station = None
+        self._shutting_down = False
+        self._last_playback = (-1, False)
+        self._state_timer = QTimer(self)
+        self._state_timer.setInterval(500)
+        self._state_timer.timeout.connect(self._poll_playback)
         self.view.loadFinished.connect(self._on_loaded)
         # A synthetic HTTPS origin lets this isolated page play HTTPS media
         # without granting the browser's local documents remote access.
@@ -84,13 +95,33 @@ class RadioDialog(QDialog):
             self._on_loaded(True)
 
     def _on_loaded(self, ok):
+        if self._shutting_down:
+            return
         self._ready = ok
+        if ok:
+            self._state_timer.start()
         if ok and self._pending_station is not None:
             index = self._pending_station
             self._pending_station = None
             self.view.page().runJavaScript(f"selectStation({index})")
 
+    def _poll_playback(self):
+        if self._ready and not self._shutting_down:
+            self.view.page().runJavaScript(
+                "({station: selected, playing: isPlaying})", self._receive_playback)
+
+    def _receive_playback(self, state):
+        if self._shutting_down or not isinstance(state, dict):
+            return
+        current = (int(state["station"]), bool(state["playing"]))
+        if current != self._last_playback:
+            self._last_playback = current
+            self.playbackChanged.emit(*current)
+
     def shutdown(self):
+        self._shutting_down = True
+        self._state_timer.stop()
+        self.playbackChanged.emit(-1, False)
         self._pending_station = None
         # Muting is synchronous even if the renderer is busy or unavailable.
         self.view.page().setAudioMuted(True)
