@@ -9,12 +9,23 @@ Automated headless regression tests for persistent browser profiles, browser
 security settings, blocked local-file reads, navigation to local HTTP services,
 update restart timers, and update checks launched outside the project directory.
 Separate-process tests cover competing launches, crash recovery, lock failures,
-and release of the profile lock before restarting.
+and release of the profile lock before restarting. Browser tests also cover
+verbose updater output, failed process startup, and developer-tools lifetime.
 Requires PyQt6 and PyQt6-WebEngine; the update-script test also requires Bash
 (Git for Windows is supported). External update actions are stubbed.
 
 ```bash
 python -m unittest discover -s tests -p test_reliability.py -v
+```
+
+### `test_update_script.py`
+Tests updater policy, unprivileged logging, backup failures, and dependency
+installation error reporting. Local Git repositories verify fast-forward
+updates and skipping ahead or diverged branches. No network or production
+checkout is used. Requires Git and Bash; Qt is not required.
+
+```bash
+python -m unittest discover -s tests -p test_update_script.py -v
 ```
 
 ### `test_qt_version.py`

@@ -177,9 +177,69 @@ class BrowserReliabilityTests(unittest.TestCase):
             finally:
                 os.chdir(previous)
             popen.assert_called_once()
+            self.assertEqual(popen.call_args.args[0][0], "bash")
             self.assertEqual(Path(popen.call_args.kwargs["cwd"]).resolve(),
                              Path(__file__).resolve().parents[1])
             self.browser.update_timer.stop()
+
+    def test_verbose_update_does_not_block_before_process_exit(self):
+        self.browser.is_raspberry_pi = True
+        real_popen = subprocess.Popen
+
+        def verbose_child(*args, **kwargs):
+            return real_popen([sys.executable, "-c",
+                               "import sys; print('x' * 2000000); "
+                               "sys.stderr.write('y' * 2000000); "
+                               "print('UPDATES_APPLIED_AUTOMATICALLY')"], **kwargs)
+
+        with patch("kiosk_browser.subprocess.Popen", side_effect=verbose_child), \
+                patch.object(self.browser, "show_update_notification") as notify:
+            self.browser.check_for_updates()
+            process = self.browser.update_process
+            try:
+                process.wait(timeout=10)
+                self.browser.check_update_status(process)
+                notify.assert_called_once()
+                self.assertTrue(notify.call_args.args[1])
+                self.assertIsNone(self.browser.update_output)
+                self.assertIsNone(self.browser.update_process)
+            finally:
+                self.browser.update_timer.stop()
+                if process.poll() is None:
+                    process.kill()
+                process.wait(timeout=5)
+
+    def test_failed_update_start_closes_output_file(self):
+        self.browser.is_raspberry_pi = True
+        with patch("kiosk_browser.subprocess.Popen", side_effect=OSError("missing bash")):
+            self.browser.check_for_updates()
+        self.assertIsNone(self.browser.update_output)
+
+    def test_disabled_auto_apply_notification_is_not_reported_as_failure(self):
+        process = Mock(returncode=0)
+        process.poll.return_value = 0
+        self.browser.update_output = tempfile.TemporaryFile()
+        self.browser.update_output.write(b"Updates are available; automatic application is disabled.")
+        self.browser.update_process = process
+        with patch.object(self.browser, "show_update_notification") as notify:
+            self.browser.check_update_status(process)
+        notify.assert_called_once()
+        self.assertIn("disabled", notify.call_args.args[0])
+        self.assertNotIn("failed", notify.call_args.args[0])
+        self.assertFalse(notify.call_args.args[1])
+
+    def test_developer_tools_survive_and_toggle_without_creating_more_windows(self):
+        self.browser.toggle_dev_tools()
+        view = self.browser.dev_tools
+        self.assertTrue(view.isVisible())
+        self.assertEqual(self.browser.web_view.page().devToolsPage(), view.page())
+        self.browser.toggle_dev_tools()
+        self.assertFalse(view.isVisible())
+        self.browser.toggle_dev_tools()
+        self.assertIs(view, self.browser.dev_tools)
+        self.assertTrue(view.isVisible())
+        self.browser.close()
+        self.assertFalse(view.isVisible())
 
 
 class SingleInstanceTests(unittest.TestCase):
@@ -357,12 +417,13 @@ class UpdateScriptTests(unittest.TestCase):
         source = script.read_text().rsplit('main "$@"', 1)[0]
         harness = r'''
 log_message() { :; }
+timeout() { shift 2; "$@"; }
 git() {
     [ "$PWD" = "$PROJECT_DIR" ] || exit 91
     case "$1" in
         fetch) echo FETCH_ROOT_OK ;;
         rev-parse) echo same-commit ;;
-        pull) [ "$2" = "--ff-only" ] || exit 92; echo PULL_ROOT_OK ;;
+        merge) [ "$2" = "--ff-only" ] || exit 92; echo MERGE_ROOT_OK ;;
         diff) : ;;
     esac
 }
@@ -377,7 +438,7 @@ apply_updates || exit 94
             result = subprocess.run([bash, "-c", source + harness, script.as_posix()],
                                     cwd=unrelated, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("PULL_ROOT_OK", result.stdout)
+        self.assertIn("MERGE_ROOT_OK", result.stdout)
 
 
 if __name__ == "__main__":

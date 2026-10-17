@@ -24,6 +24,10 @@ AUTO_UPDATE_CHECK=true
 AUTO_UPDATE_APPLY=true
 ```
 
+With `AUTO_UPDATE_APPLY=false`, background and cron checks report available
+updates without applying them. An interactive terminal can still offer a prompt.
+`UPDATE_TIMEOUT` must be a positive integer and limits Git fetch time in seconds.
+
 ### Important Notes
 
 - **Automatic updates only work on Raspberry Pi** - disabled on other platforms for safety
@@ -42,11 +46,21 @@ AUTO_UPDATE_APPLY=true
 
 ### When Updates Are Found
 
-1. **Automatic Download**: Git pulls latest changes from remote repository
+1. **Automatic Download**: Git fetches changes with a timeout, then applies the
+   exact fetched commit using a fast-forward merge. Ahead or diverged local
+   branches are skipped.
 2. **Backup Creation**: Creates backup in `/tmp/kiosk-backup-[timestamp]/`
-3. **Dependencies Update**: Updates Python packages if `requirements.txt` changed
-4. **Version Increment**: Automatically increments version number
+   before changing the checkout; backup failure aborts the update.
+3. **Dependencies Update**: Checks the entire incoming commit range for dependency
+   changes. A virtual environment uses `requirements-rpi.txt` when available,
+   preserving system-installed Qt packages.
+4. **Version Metadata**: Uses the version metadata supplied by the repository.
 5. **Restart Flag**: Creates `/tmp/kiosk-restart-needed` flag file
+
+If dependency installation fails, the updater reports failure without requesting
+a restart. The checkout has already advanced; retry the logged pip command or
+restore the backup before restarting the kiosk. Dependency installation is not
+transactional.
 
 ### User Experience
 
@@ -103,13 +117,16 @@ On Raspberry Pi with `AUTO_UPDATE_APPLY=true`, this will apply updates automatic
 
 4. **Check Internet**: Ensure internet connectivity
    ```bash
-   ping github.com
+   git ls-remote origin main
    ```
 
 5. **Check Logs**: Review update logs
    ```bash
-   sudo tail -f /var/log/kiosk-update.log
+   tail -f "${XDG_STATE_HOME:-$HOME/.local/state}/office-kiosk/update.log"
    ```
+
+   Logging runs as the desktop user and never invokes `sudo`. Set `UPDATE_LOG`
+   in `scripts/update_config.conf` to choose another writable log file.
 
 ### Common Issues
 
@@ -149,7 +166,7 @@ cp -r /tmp/kiosk-backup-[timestamp]/* /path/to/office_kiosk/
 
 ### Update Timeout
 ```bash
-# Maximum time to wait for update check (seconds)
+# Maximum time allowed for Git fetch (seconds)
 UPDATE_TIMEOUT=30
 ```
 

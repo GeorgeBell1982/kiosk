@@ -98,7 +98,7 @@ try_pip_piwheels() {
     log "Method 2: Trying pip with piwheels..."
     
     # Use piwheels index for pre-compiled ARM packages
-    if pip3 install --extra-index-url https://www.piwheels.org/simple/ PyQt6 PyQt6-WebEngine PyQt6-Svg; then
+    if pip3 install --extra-index-url https://www.piwheels.org/simple/ PyQt6 PyQt6-WebEngine; then
         success "Piwheels packages installed"
         if test_pyqt6; then
             success "PyQt6 working with piwheels!"
@@ -117,7 +117,7 @@ try_pip_piwheels() {
 try_regular_pip() {
     log "Method 3: Trying regular pip..."
     
-    if pip3 install PyQt6 PyQt6-WebEngine PyQt6-Svg; then
+    if pip3 install PyQt6 PyQt6-WebEngine; then
         success "Regular pip packages installed"
         if test_pyqt6; then
             success "PyQt6 working with regular pip!"

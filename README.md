@@ -14,7 +14,7 @@ python3 kiosk_browser.py
 
 ### Other Systems
 ```bash
-pip3 install PyQt6 PyQt6-WebEngine PyQt6-Svg
+pip3 install PyQt6 PyQt6-WebEngine
 python3 kiosk_browser.py
 ```
 
@@ -127,7 +127,7 @@ If you see multiple browser windows opening:
 - **OS**: Raspberry Pi OS Bookworm+ (recommended) or any Linux with Qt6
 - **Hardware**: Raspberry Pi 3B+ or newer, 1GB+ RAM
 - **Display**: Any resolution, optimized for 1024x600 touchscreens
-- **Python**: 3.9+ with PyQt6, PyQt6-WebEngine, PyQt6-Svg
+- **Python**: 3.9+ with PyQt6 and PyQt6-WebEngine (SVG support is included with PyQt6)
 
 ## Browser security and single-instance startup
 

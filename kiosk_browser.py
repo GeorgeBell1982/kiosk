@@ -45,7 +45,6 @@ except ImportError:
 
 from PyQt6.QtCore import QUrl, Qt, QSize, QTimer, QLockFile
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QPainter
-from PyQt6.QtSvgWidgets import QSvgWidget
 
 # Try to import SVG support for Qt6
 try:
@@ -53,7 +52,7 @@ try:
     SVG_AVAILABLE = True
     logging.info("Qt6 SVG support available")
 except ImportError:
-    logging.warning("Qt6 SVG support not available - using fallback icons. Install PyQt6-Qt6 for SVG icon support.")
+    logging.warning("Qt6 SVG support not available - using fallback icons. Install python3-pyqt6.qtsvg or reinstall PyQt6 for SVG icon support.")
     SVG_AVAILABLE = False
     QSvgRenderer = None
 
@@ -1483,6 +1482,15 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
             except Exception as e:
                 logging.warning(f"Could not hide virtual keyboard on close: {e}")
         
+        if hasattr(self, 'dev_tools'):
+            self.dev_tools.close()
+        # The updater retains its own output handle until it exits, even if we close.
+        if getattr(self, 'update_output', None) is not None:
+            self.update_output.close()
+            self.update_output = None
+        if hasattr(self, 'update_timer'):
+            self.update_timer.stop()
+
         # Call parent closeEvent to ensure proper cleanup
         super().closeEvent(event)
         
@@ -1494,10 +1502,15 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
         try:
             page = self.web_view.page()
             if hasattr(page, 'setDevToolsPage'):
-                logging.info("Opening developer tools")
-                dev_tools = QWebEngineView()
-                page.setDevToolsPage(dev_tools.page())
-                dev_tools.show()
+                if not hasattr(self, 'dev_tools'):
+                    self.dev_tools = QWebEngineView(self)
+                    self.dev_tools.setWindowFlag(Qt.WindowType.Window, True)
+                    page.setDevToolsPage(self.dev_tools.page())
+                if self.dev_tools.isVisible():
+                    self.dev_tools.hide()
+                else:
+                    self.dev_tools.show()
+                    self.dev_tools.raise_()
             else:
                 logging.warning("Developer tools not available")
         except Exception as e:
@@ -1523,6 +1536,9 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
             # Only check for updates on Raspberry Pi
             return
             
+        if getattr(self, 'update_process', None) is not None:
+            return
+
         try:
             # Check if update script exists
             update_script = os.path.join(os.path.dirname(__file__), "scripts", "update_check.sh")
@@ -1541,18 +1557,27 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
             # The update_check.sh script will handle automatic updates based on configuration
             try:
                 # Start the update check process in the background
-                process = subprocess.Popen(
-                    [update_script],
-                    cwd=os.path.dirname(__file__),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
-                )
+                # A child can fill a pipe before polling sees it exit. A temporary
+                # file drains output without blocking the child or the GUI thread.
+                self.update_output = tempfile.TemporaryFile()
+                try:
+                    process = subprocess.Popen(
+                        ['bash', update_script],
+                        cwd=os.path.dirname(__file__),
+                        stdin=subprocess.DEVNULL,
+                        stdout=self.update_output,
+                        stderr=subprocess.STDOUT,
+                    )
+                except Exception:
+                    self.update_output.close()
+                    self.update_output = None
+                    raise
+                self.update_process = process
                 
                 # Use a timer to check the process status after a short delay
                 # This allows the UI to load without blocking
                 from PyQt6.QtCore import QTimer
-                self.update_timer = QTimer()
+                self.update_timer = QTimer(self)
                 self.update_timer.setSingleShot(True)
                 self.update_timer.timeout.connect(lambda: self.check_update_status(process))
                 self.update_timer.start(2000)  # Check after 2 seconds
@@ -1572,14 +1597,22 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                 self.update_timer.start(5000)  # Check again in 5 seconds
                 return
                 
-            # Process completed, get the output
-            stdout, stderr = process.communicate()
+            # Read the end of the log, where the script emits its result marker.
+            # Bound memory use even when dependency installation is very verbose.
+            self.update_output.seek(0, os.SEEK_END)
+            self.update_output.seek(max(0, self.update_output.tell() - 65536))
+            stdout = self.update_output.read().decode('utf-8', errors='replace')
+            self.update_output.close()
+            self.update_output = None
+            self.update_process = None
             
             if process.returncode == 0:
                 # Update check completed successfully
                 output = stdout.strip()
                 if "UPDATES_APPLIED_AUTOMATICALLY" in output or "Updates applied automatically" in output:
                     self.show_update_notification("Updates have been applied automatically! Application will restart with the new version.", True)
+                elif "automatic application is disabled" in output:
+                    self.show_update_notification("Updates are available. Automatic application is disabled in update_config.conf.", False)
                 elif "Updates are available" in output and "Applying updates automatically" not in output:
                     self.show_update_notification("Updates are available but auto-apply failed.", False)
                 elif "Already up to date" in output:
@@ -1597,8 +1630,8 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
             else:
                 # Update check failed
                 logging.warning(f"Update check failed with return code {process.returncode}")
-                if stderr:
-                    logging.warning(f"Update check error: {stderr}")
+                if stdout:
+                    logging.warning(f"Update check error: {stdout}")
                     
         except Exception as e:
             logging.error(f"Error checking update status: {e}")
@@ -1631,7 +1664,7 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                 QMessageBox.information(
                     self,
                     "Update Information",
-                    f"{message}\n\nAutomatic updates are enabled. Updates will be applied automatically when the application starts."
+                    message
                 )
                 
         except Exception as e:

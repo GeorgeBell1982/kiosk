@@ -3,7 +3,7 @@
 # Checks for updates from GitHub repository and prompts for update
 
 REPO_URL="https://github.com/GeorgeBell1982/kiosk.git"
-UPDATE_LOG="/var/log/kiosk-update.log"
+UPDATE_LOG="${XDG_STATE_HOME:-$HOME/.local/state}/office-kiosk/update.log"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/update_config.conf"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -24,16 +24,12 @@ fi
 
 # Function to log messages
 log_message() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | sudo tee -a "$UPDATE_LOG"
-}
-
-# Function to check internet connectivity
-check_internet() {
-    if ping -c 1 -W 2 github.com >/dev/null 2>&1; then
-        return 0
-    else
-        return 1
+    local message="$(date '+%Y-%m-%d %H:%M:%S') - $1"
+    printf '%s\n' "$message"
+    if ! { mkdir -p "$(dirname "$UPDATE_LOG")" && printf '%s\n' "$message" >> "$UPDATE_LOG"; }; then
+        printf 'Could not write update log: %s\n' "$UPDATE_LOG" >&2
     fi
+    return 0
 }
 
 # Function to check for updates
@@ -49,20 +45,23 @@ check_for_updates() {
     fi
     
     # Fetch latest changes
-    if ! git fetch origin main >/dev/null 2>&1; then
+    if ! GIT_TERMINAL_PROMPT=0 timeout --kill-after=5 "$UPDATE_TIMEOUT" git fetch origin main; then
         log_message "Failed to fetch updates from remote repository"
-        return 1
+        return 2
     fi
-    
+
     # Check if we're behind
     LOCAL_COMMIT=$(git rev-parse HEAD)
     REMOTE_COMMIT=$(git rev-parse origin/main)
     
-    if [ "$LOCAL_COMMIT" != "$REMOTE_COMMIT" ]; then
+    if [ "$LOCAL_COMMIT" = "$REMOTE_COMMIT" ]; then
+        log_message "Already up to date"
+        return 1
+    elif git merge-base --is-ancestor "$LOCAL_COMMIT" "$REMOTE_COMMIT"; then
         log_message "Updates available! Local: $LOCAL_COMMIT, Remote: $REMOTE_COMMIT"
         return 0
     else
-        log_message "Already up to date"
+        log_message "Local branch is ahead of or diverged from origin/main; skipping automatic update"
         return 1
     fi
 }
@@ -75,26 +74,37 @@ apply_updates() {
     
     # Backup current version
     BACKUP_DIR="/tmp/kiosk-backup-$(date +%Y%m%d-%H%M%S)"
-    mkdir -p "$BACKUP_DIR"
-    cp -r . "$BACKUP_DIR/" 2>/dev/null || true
+    if ! mkdir -p "$BACKUP_DIR" || ! cp -r . "$BACKUP_DIR/"; then
+        log_message "Backup failed; update was not applied"
+        return 1
+    fi
     log_message "Backup created at $BACKUP_DIR"
     
-    # Pull updates
-    if git pull --ff-only origin main; then
+    PREVIOUS_COMMIT=$(git rev-parse HEAD) || return 1
+
+    # Apply the exact fetched commit without another network request.
+    if git merge --ff-only "$REMOTE_COMMIT"; then
         log_message "Updates applied successfully"
         
         # Make scripts executable
         chmod +x scripts/*.sh install/*.sh
         
-        # Update Python dependencies if requirements.txt changed
-        if git diff HEAD~1 HEAD --name-only | grep -q "requirements.txt"; then
-            log_message "Requirements.txt changed, updating dependencies..."
+        # Check the entire update range, including changes before the final commit.
+        if git diff "$PREVIOUS_COMMIT" HEAD --name-only | grep -Eq '^requirements(-rpi)?\.txt$'; then
             if [ -d ".venv" ]; then
-                .venv/bin/pip install -r requirements.txt
+                requirements_file="requirements.txt"
+                if [ -f "requirements-rpi.txt" ]; then
+                    requirements_file="requirements-rpi.txt"
+                fi
+                log_message "Updating dependencies from $requirements_file..."
+                if ! .venv/bin/python -m pip install -r "$requirements_file"; then
+                    log_message "Dependency installation failed. Restore $BACKUP_DIR or retry pip installation manually."
+                    return 1
+                fi
                 log_message "Dependencies updated"
             fi
         fi
-        
+
         return 0
     else
         log_message "Failed to apply updates"
@@ -118,18 +128,17 @@ main() {
     
     log_message "Starting update check..."
     
-    # Check internet connectivity
-    if ! check_internet; then
-        log_message "No internet connection. Skipping update check."
-        exit 0
+    if [[ ! "$UPDATE_TIMEOUT" =~ ^[1-9][0-9]*$ ]]; then
+        log_message "UPDATE_TIMEOUT must be a positive integer"
+        exit 1
     fi
-    
+
     # Check for updates
     if check_for_updates; then
         log_message "Updates found! Starting automatic update process..."
         
         # Determine if we should apply updates automatically
-        if [ "$AUTO_UPDATE_APPLY" = "true" ] || [ ! -t 0 ]; then
+        if [ "$AUTO_UPDATE_APPLY" = "true" ]; then
             # Apply updates automatically
             log_message "Auto-applying updates (AUTO_UPDATE_APPLY=true, no user interaction)..."
             echo "Applying updates automatically..."
@@ -146,6 +155,8 @@ main() {
                 echo "Automatic update failed. Check logs at $UPDATE_LOG"
                 exit 1
             fi
+        elif [ ! -t 0 ]; then
+            echo "Updates are available; automatic application is disabled."
         else
             # Prompt user for updates
             echo "Updates are available for Office Kiosk Browser!"
@@ -167,8 +178,13 @@ main() {
                 log_message "Update skipped by user"
             fi
         fi
+    else
+        status=$?
+        if [ "$status" -gt 1 ]; then
+            exit 1
+        fi
     fi
-    
+
     log_message "Update check completed"
 }
 

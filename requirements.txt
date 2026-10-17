@@ -5,6 +5,6 @@
 # For Raspberry Pi, use: sudo apt install python3-pyqt6 python3-pyqt6.qtwebengine python3-pyqt6.qtsvg
 # If WebEngine is not available, the app will fall back to WebKit or pip installation
 # For other systems, pip will install these versions
+# SVG modules are included in PyQt6; no separate PyQt6-Svg package is needed.
 PyQt6>=6.6.0
 PyQt6-WebEngine>=6.6.0
-PyQt6-Svg>=6.6.0
