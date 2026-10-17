@@ -1,51 +1,38 @@
-# Office Kiosk Browser PowerShell Launcher
-# This script provides a more robust way to launch the kiosk browser on Windows
-
+# Runtime launcher: use the installed environment and propagate browser failures.
 param(
     [switch]$Fullscreen,
     [switch]$Help
 )
 
+$ErrorActionPreference = 'Stop'
 if ($Help) {
-    Write-Host "Office Kiosk Browser Launcher" -ForegroundColor Green
-    Write-Host "Usage: .\start_kiosk.ps1 [-Fullscreen] [-Help]" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "Options:"
-    Write-Host "  -Fullscreen    Start in fullscreen mode"
-    Write-Host "  -Help          Show this help message"
+    Write-Host 'Usage: .\scripts\start_kiosk.ps1 [-Fullscreen] [-Help]'
     exit 0
 }
 
-Write-Host "Starting Office Kiosk Browser..." -ForegroundColor Green
-Write-Host ""
-
-# Get the project root directory (parent of scripts)
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ProjectDir = Split-Path -Parent $ScriptDir
-
-# Change to the project directory
-Set-Location $ProjectDir
-
-# Check if virtual environment exists
-if (-not (Test-Path ".venv")) {
-    Write-Host "Virtual environment not found. Creating..." -ForegroundColor Yellow
-    python -m venv .venv
-    
-    Write-Host "Installing dependencies..." -ForegroundColor Yellow
-    & ".venv\Scripts\pip.exe" install -r requirements.txt
+$ProjectDir = Split-Path -Parent $PSScriptRoot
+Push-Location -LiteralPath $ProjectDir
+try {
+    if (Test-Path -LiteralPath '.venv') {
+        $PythonCmd = Join-Path $ProjectDir '.venv\Scripts\python.exe'
+        if (-not (Test-Path -LiteralPath $PythonCmd -PathType Leaf)) {
+            throw 'The .venv interpreter is missing. Repair the environment before starting.'
+        }
+    } else {
+        $PythonCmd = (Get-Command python -CommandType Application -ErrorAction Stop).Source
+    }
+    & $PythonCmd -c 'from PyQt6.QtWidgets import QApplication; from PyQt6.QtWebEngineWidgets import QWebEngineView'
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error 'Qt6 WebEngine is unavailable. Install requirements.txt in the selected Python environment.'
+    }
+    $BrowserArgs = @()
+    if ($Fullscreen) { $BrowserArgs += '--fullscreen' }
+    & $PythonCmd (Join-Path $ProjectDir 'kiosk_browser.py') @BrowserArgs
+    $BrowserExitCode = $LASTEXITCODE
+} catch {
+    Write-Host $_.Exception.Message -ForegroundColor Red
+    $BrowserExitCode = 1
+} finally {
+    Pop-Location
 }
-
-# Prepare arguments
-$appArgs = @()
-if ($Fullscreen) {
-    $appArgs += "--fullscreen"
-}
-
-# Run the application
-Write-Host "Launching browser..." -ForegroundColor Green
-& ".venv\Scripts\python.exe" "kiosk_browser.py" @appArgs
-
-Write-Host ""
-Write-Host "Office Kiosk Browser has stopped." -ForegroundColor Yellow
-Write-Host "Press any key to continue..."
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+exit $BrowserExitCode

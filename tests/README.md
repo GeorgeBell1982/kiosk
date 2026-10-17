@@ -4,6 +4,18 @@ Verification and testing utilities for the Office Kiosk Browser.
 
 ## Available Tests
 
+### `test_installation_scripts.py`
+Tests launcher argument and exit-code handling, dependency failures, graphical
+session checks, desktop-entry quoting, unattended installation, and safe autostart
+management. OS-changing commands are stubbed, and fixtures use the OS temporary
+directory. Windows additionally tests the actual batch and PowerShell launchers
+with a temporary Python environment. Requires Python and Bash; no Qt installation,
+package installation, service activation, or live desktop is needed.
+
+```bash
+python -m unittest discover -s tests -p test_installation_scripts.py -v
+```
+
 ### `test_reliability.py`
 Automated headless regression tests for persistent browser profiles, browser
 security settings, blocked local-file reads, navigation to local HTTP services,

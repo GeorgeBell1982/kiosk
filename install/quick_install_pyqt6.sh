@@ -4,6 +4,11 @@
 # Optimized for Raspberry Pi OS Bookworm and newer versions
 
 set -e
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname -- "$SCRIPT_DIR")"
+VENV_PYTHON="$PROJECT_DIR/.venv/bin/python"
+AUTOSTART_MODE=ask
+ALLOW_SOURCE_BUILD=false
 
 # Colors for output
 RED='\033[0;31m'
@@ -30,7 +35,9 @@ warning() {
 
 # Test if PyQt6 is working with all required modules
 test_pyqt6() {
-    python3 -c "
+    local interpreter=python3
+    if [ -x "$VENV_PYTHON" ]; then interpreter="$VENV_PYTHON"; fi
+    "$interpreter" -c "
 import sys
 try:
     from PyQt6.QtWidgets import QApplication
@@ -61,25 +68,22 @@ except ImportError as e:
 try_system_packages() {
     log "Method 1: Installing Qt6 system packages (Bookworm)..."
     
-    # Update and upgrade system packages automatically
+    # Refresh package metadata without upgrading unrelated system packages
     log "Updating package lists..."
-    sudo apt update -qq
-    
-    log "Upgrading system packages automatically (no prompts)..."
-    sudo DEBIAN_FRONTEND=noninteractive apt upgrade -y
+    sudo apt update -qq || return 1
     
     # Install Qt6 packages (available on Bookworm and newer)
     log "Installing Qt6 packages: python3-pyqt6, python3-pyqt6.qtwebengine, python3-pyqt6.qtsvg, python3-pyqt6-dev"
     
-    # Also install essential build dependencies in case we need them later
-    sudo DEBIAN_FRONTEND=noninteractive apt install -y build-essential python3-dev python3-pip
-    
+    sudo DEBIAN_FRONTEND=noninteractive apt install -y python3-venv || return 1
+
     # Install virtual keyboard for touchscreen use
     log "Installing virtual keyboard (wvkbd) for touchscreen support..."
     sudo DEBIAN_FRONTEND=noninteractive apt install -y wvkbd || warning "wvkbd not available - virtual keyboard button will show installation instructions"
     
     if sudo DEBIAN_FRONTEND=noninteractive apt install -y python3-pyqt6 python3-pyqt6.qtwebengine python3-pyqt6.qtsvg python3-pyqt6-dev; then
         success "Qt6 system packages installed"
+        python3 -m venv --system-site-packages "$PROJECT_DIR/.venv" || return 1
         if test_pyqt6; then
             success "PyQt6 working with Qt6 system packages!"
             return 0
@@ -98,7 +102,8 @@ try_pip_piwheels() {
     log "Method 2: Trying pip with piwheels..."
     
     # Use piwheels index for pre-compiled ARM packages
-    if pip3 install --extra-index-url https://www.piwheels.org/simple/ PyQt6 PyQt6-WebEngine; then
+    python3 -m venv --system-site-packages "$PROJECT_DIR/.venv" || return 1
+    if "$VENV_PYTHON" -m pip install --extra-index-url https://www.piwheels.org/simple/ -r "$PROJECT_DIR/requirements.txt"; then
         success "Piwheels packages installed"
         if test_pyqt6; then
             success "PyQt6 working with piwheels!"
@@ -117,7 +122,8 @@ try_pip_piwheels() {
 try_regular_pip() {
     log "Method 3: Trying regular pip..."
     
-    if pip3 install PyQt6 PyQt6-WebEngine; then
+    python3 -m venv --system-site-packages "$PROJECT_DIR/.venv" || return 1
+    if "$VENV_PYTHON" -m pip install -r "$PROJECT_DIR/requirements.txt"; then
         success "Regular pip packages installed"
         if test_pyqt6; then
             success "PyQt6 working with regular pip!"
@@ -147,77 +153,62 @@ try_build_from_source() {
 
 # Main function
 main() {
-    log "Automated PyQt6 Quick Install for Raspberry Pi"
-    log "================================================"
-    log "This script automatically installs Qt6 with no user prompts"
-    
-    # Check if running on Raspberry Pi
+    for option in "$@"; do
+        case "$option" in
+            --autostart) AUTOSTART_MODE=yes ;;
+            --no-autostart) AUTOSTART_MODE=no ;;
+            --build-from-source) ALLOW_SOURCE_BUILD=true ;;
+            --help|-h)
+                echo "Usage: bash install/quick_install_pyqt6.sh [--autostart|--no-autostart] [--build-from-source]"
+                return 0 ;;
+            *) error "Unknown option: $option"; return 2 ;;
+        esac
+    done
+    if [ "$(id -u)" -eq 0 ]; then
+        error "Run this installer as the desktop user; it invokes sudo only for OS packages."
+        return 1
+    fi
     if ! grep -q "Raspberry Pi" /proc/cpuinfo 2>/dev/null; then
-        error "This script is designed for Raspberry Pi only!"
-        error "For other systems, use: pip3 install PyQt6 PyQt6-WebEngine"
-        exit 1
+        error "This installer requires Raspberry Pi OS Bookworm or newer."
+        return 1
     fi
-    
-    PI_MODEL=$(cat /proc/cpuinfo | grep "Model" | head -1 | cut -d':' -f2 | xargs)
-    log "Detected: $PI_MODEL"
-    
-    # Check if PyQt6 is already working
-    log "Checking existing PyQt6 installation..."
+    cd -- "$PROJECT_DIR"
+
     if test_pyqt6; then
-        success "PyQt6 with WebEngine is already installed and working!"
-        success "You can run: python3 kiosk_browser.py"
-        exit 0
-    fi
-    
-    # Try installation methods in order
-    log "PyQt6 not found or not working. Trying installation methods..."
-    
-    if try_system_packages; then
-        success "Installation successful via system packages!"
+        success "Qt6 with WebEngine is already installed."
+    elif try_system_packages; then
+        success "Installation successful via system packages."
     elif try_pip_piwheels; then
-        success "Installation successful via piwheels!"
+        success "Installation successful via virtual environment and piwheels."
     elif try_regular_pip; then
-        success "Installation successful via regular pip!"
-    elif try_build_from_source; then
-        success "Installation successful via build from source!"
+        success "Installation successful via virtual environment and pip."
+    elif [ "$ALLOW_SOURCE_BUILD" = true ] && try_build_from_source; then
+        success "Installation successful via source build."
     else
-        error "All Qt6 installation methods failed!"
-        error "You may need to:"
-        error "1. Ensure you're running Raspberry Pi OS Bookworm or newer"
-        error "2. Check your internet connection"
-        error "3. Try running with sudo if permissions are an issue"
-        error "4. Run the troubleshoot script: ./troubleshoot_pyqt6.sh"
-        exit 1
+        error "Qt6 installation failed. See the diagnostics above."
+        error "Source builds are optional: rerun with --build-from-source to allow one."
+        return 1
     fi
-    
-    # Final test
-    log "Final verification..."
-    if test_pyqt6; then
-        success "🎉 PyQt6 installation complete and verified!"
-        
-        # Ask user if they want to set up autostart
-        echo
-        read -p "Would you like to set up autostart so the kiosk browser launches on boot? [Y/n]: " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-            log "Setting up autostart..."
-            chmod +x "$SCRIPT_DIR/setup_autostart.sh"
-            "$SCRIPT_DIR/setup_autostart.sh"
+
+    test_pyqt6 || { error "Final Qt6 verification failed"; return 1; }
+    if [ "$AUTOSTART_MODE" = ask ]; then
+        if [ -t 0 ]; then
+            IFS= read -r -p "Enable desktop-login autostart? [Y/n]: " REPLY || REPLY=n
+            if [[ -z "$REPLY" || "$REPLY" =~ ^[Yy]$ ]]; then
+                AUTOSTART_MODE=yes
+            else
+                AUTOSTART_MODE=no
+            fi
         else
-            log "Skipping autostart setup. You can run it later with: ./install/setup_autostart.sh"
+            AUTOSTART_MODE=no
         fi
-        
-        echo
-        success "Installation complete!"
-        success "You can now run: python3 test_qt_version.py"
-        success "And then: python3 kiosk_browser.py"
-        if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-            success "The app will start automatically on next boot!"
-        fi
-    else
-        error "Installation completed but final test failed"
-        exit 1
     fi
+    if [ "$AUTOSTART_MODE" = yes ]; then
+        bash "$SCRIPT_DIR/setup_autostart.sh" || return 1
+    else
+        log "Autostart unchanged. Enable it with: bash install/setup_autostart.sh"
+    fi
+    success "Ready. Start with: bash scripts/start_kiosk.sh"
 }
 
 main "$@"

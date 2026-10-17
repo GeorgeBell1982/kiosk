@@ -8,15 +8,24 @@ A modern, touchscreen-friendly web browser built with PyQt6, designed for Raspbe
 ```bash
 git clone <repository-url> office_kiosk
 cd office_kiosk
-./install/quick_install_pyqt6.sh
-python3 kiosk_browser.py
+bash install/quick_install_pyqt6.sh
+bash scripts/start_kiosk.sh
 ```
 
 ### Other Systems
 ```bash
-pip3 install PyQt6 PyQt6-WebEngine
-python3 kiosk_browser.py
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+bash scripts/start_kiosk.sh
 ```
+
+On Windows, create the environment with `python -m venv .venv`, install with
+`.venv\Scripts\python.exe -m pip install -r requirements.txt`, then run
+`scripts\start_kiosk.ps1` or `scripts\start_kiosk.bat`.
+
+Launchers select the project's virtual environment when present and otherwise
+use system Python. They report missing dependencies without installing packages,
+changing display settings, prompting for input, or running duplicate update checks.
 
 ## ✨ Features
 
@@ -108,7 +117,7 @@ python3 tests/test_svg_icons.py
 ```
 
 **Common Problems:**
-- **Qt6 not found**: Use `./install/quick_install_pyqt6.sh`
+- **Qt6 not found**: Use `bash install/quick_install_pyqt6.sh`
 - **SVG icons missing**: Install `python3-pyqt6.qtsvg`
 - **Virtual keyboard**: Install `wvkbd` package
 - **Multiple browser windows**: See [Multiple Instances Troubleshooting](docs/TROUBLESHOOTING_MULTIPLE_INSTANCES.md)
@@ -117,9 +126,9 @@ python3 tests/test_svg_icons.py
 If you see multiple browser windows opening:
 ```bash
 ./install/trace_autostart.sh        # Quick diagnosis
-./install/manage_autostart.sh stop   # Stop all instances
-./install/manage_autostart.sh disable # Remove all autostart
-./install/manage_autostart.sh enable  # Set up clean autostart
+bash install/manage_autostart.sh stop   # Stop all instances
+bash install/manage_autostart.sh disable # Remove all autostart
+bash install/manage_autostart.sh enable  # Set up clean autostart
 ```
 
 ## 🔧 Requirements
@@ -158,26 +167,33 @@ To automatically start the kiosk browser on boot:
 
 ```bash
 # Enable autostart (run once after installation)
-./install/setup_autostart.sh
+bash install/setup_autostart.sh
 
 # Or use the management script
-./install/manage_autostart.sh enable
+bash install/manage_autostart.sh enable
 ```
 
 **Check autostart status:**
 ```bash
-./install/manage_autostart.sh status
+bash install/manage_autostart.sh status
 ```
 
 **Disable autostart:**
 ```bash
-./install/manage_autostart.sh disable
+bash install/manage_autostart.sh disable
 ```
 
-The autostart setup configures multiple methods:
-- **Desktop autostart** - starts when user logs into desktop
-- **Systemd user service** - more robust, survives logout
-- **Bashrc fallback** - backup method for shell logins
+Setup enables one desktop-login entry using the current checkout's launcher.
+It honors `XDG_CONFIG_HOME` and handles project paths containing spaces. Run it
+as the desktop user. No systemd or shell-profile fallback is enabled.
+
+Use `bash install/quick_install_pyqt6.sh --autostart` for unattended installation
+with autostart, or `--no-autostart` to leave login configuration unchanged.
+Without either flag, only interactive terminals offer an autostart prompt.
+Source builds require the explicit `--build-from-source` option.
+
+Disabling removes recognized Office Kiosk Browser entries. Legacy shell-profile,
+cron, and unrelated desktop entries are preserved and reported for manual review.
 
 ## �📄 License
 

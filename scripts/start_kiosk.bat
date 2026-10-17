@@ -1,16 +1,22 @@
 @echo off
-REM Office Kiosk Browser Startup Script for Windows
-REM This script activates the virtual environment and runs the kiosk browser
-
-echo Starting Office Kiosk Browser...
-echo.
-
-REM Change to the project root directory (parent of scripts)
-cd /d "%~dp0\.."
-
-REM Activate virtual environment and run the application
-.venv\Scripts\python.exe kiosk_browser.py %*
-
-echo.
-echo Office Kiosk Browser has stopped.
-pause
+setlocal
+pushd "%~dp0.." || exit /b 1
+set "PYTHON_CMD=python"
+if exist ".venv\" (
+    if not exist ".venv\Scripts\python.exe" (
+        echo The .venv interpreter is missing. Repair the environment before starting.
+        popd
+        exit /b 1
+    )
+    set "PYTHON_CMD=%CD%\.venv\Scripts\python.exe"
+)
+"%PYTHON_CMD%" -c "from PyQt6.QtWidgets import QApplication; from PyQt6.QtWebEngineWidgets import QWebEngineView"
+if errorlevel 1 (
+    echo Qt6 WebEngine is unavailable. Install requirements.txt in the selected Python environment.
+    popd
+    exit /b 1
+)
+"%PYTHON_CMD%" "%CD%\kiosk_browser.py" %*
+set "KIOSK_EXIT_CODE=%ERRORLEVEL%"
+popd
+exit /b %KIOSK_EXIT_CODE%

@@ -1,7 +1,8 @@
+# Example only: customize user, paths and display environment before installing.
 [Unit]
 Description=Office Kiosk Browser
-After=graphical-session.target
-Wants=graphical-session.target
+After=display-manager.service
+Wants=display-manager.service
 
 [Service]
 Type=simple
@@ -12,9 +13,9 @@ Environment=WAYLAND_DISPLAY=wayland-0
 Environment=XDG_RUNTIME_DIR=/run/user/1000
 Environment=XDG_SESSION_TYPE=wayland
 WorkingDirectory=/home/pi/office_kiosk
-ExecStart=/home/pi/office_kiosk/.venv/bin/python /home/pi/office_kiosk/kiosk_browser.py --fullscreen
-Restart=always
+ExecStart=/bin/bash "/home/pi/office_kiosk/scripts/start_kiosk.sh" --fullscreen
+Restart=on-failure
 RestartSec=5
 
 [Install]
-WantedBy=graphical-session.target
+WantedBy=graphical.target

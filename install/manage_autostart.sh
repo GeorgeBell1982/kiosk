@@ -18,6 +18,7 @@ error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # Get current directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
 
 # Check autostart status
 check_autostart_status() {
@@ -45,7 +46,7 @@ check_autostart_status() {
     echo "=============================================="
     
     # Check desktop autostart
-    DESKTOP_AUTOSTART="$HOME/.config/autostart/office-kiosk-browser.desktop"
+    DESKTOP_AUTOSTART="$CONFIG_DIR/autostart/office-kiosk-browser.desktop"
     if [[ -f "$DESKTOP_AUTOSTART" ]]; then
         warning "⚠️  Desktop autostart: ENABLED at $DESKTOP_AUTOSTART"
     else
@@ -53,7 +54,7 @@ check_autostart_status() {
     fi
     
     # Check for any other desktop files in autostart
-    OTHER_DESKTOP_FILES=$(find "$HOME/.config/autostart/" -name "*kiosk*" -o -name "*office*" 2>/dev/null || true)
+    OTHER_DESKTOP_FILES=$(find "$CONFIG_DIR/autostart/" -name "*kiosk*" -o -name "*office*" 2>/dev/null || true)
     if [[ -n "$OTHER_DESKTOP_FILES" ]]; then
         warning "⚠️  Other autostart files found:"
         echo "$OTHER_DESKTOP_FILES" | while read -r file; do
@@ -152,8 +153,8 @@ check_autostart_status() {
         fi
         
         # Check user service
-        if [[ -f "$HOME/.config/systemd/user/$service_name" ]]; then
-            warning "⚠️  Old user service found: $HOME/.config/systemd/user/$service_name"
+        if [[ -f "$CONFIG_DIR/systemd/user/$service_name" ]]; then
+            warning "⚠️  Old user service found: $CONFIG_DIR/systemd/user/$service_name"
             if systemctl --user is-enabled "$service_name" >/dev/null 2>&1; then
                 warning "     And it's ENABLED!"
             fi
@@ -178,25 +179,25 @@ check_autostart_status() {
     echo
     echo "📊 Summary:"
     ENABLED_COUNT=0
-    if [[ -f "$DESKTOP_AUTOSTART" ]]; then ((ENABLED_COUNT++)); fi
-    if command -v systemctl >/dev/null && systemctl --user is-enabled office-kiosk-browser.service >/dev/null 2>&1; then ((ENABLED_COUNT++)); fi
-    if grep -q "office_kiosk\|kiosk_browser" "$HOME/.bashrc" 2>/dev/null; then ((ENABLED_COUNT++)); fi
-    if grep -q "office_kiosk\|kiosk_browser" "$HOME/.profile" 2>/dev/null; then ((ENABLED_COUNT++)); fi
-    if [[ -f "$HOME/.xinitrc" ]] && grep -q "office_kiosk\|kiosk_browser" "$HOME/.xinitrc" 2>/dev/null; then ((ENABLED_COUNT++)); fi
-    if [[ -f "$HOME/.xsessionrc" ]] && grep -q "office_kiosk\|kiosk_browser" "$HOME/.xsessionrc" 2>/dev/null; then ((ENABLED_COUNT++)); fi
-    if [[ -f "$HOME/.bash_profile" ]] && grep -q "office_kiosk\|kiosk_browser" "$HOME/.bash_profile" 2>/dev/null; then ((ENABLED_COUNT++)); fi
-    if [[ -f "/etc/rc.local" ]] && grep -q "office_kiosk\|kiosk_browser" "/etc/rc.local" 2>/dev/null; then ((ENABLED_COUNT++)); fi
-    if crontab -l 2>/dev/null | grep -q "office_kiosk\|kiosk_browser"; then ((ENABLED_COUNT++)); fi
+    if [[ -f "$DESKTOP_AUTOSTART" ]]; then ((++ENABLED_COUNT)); fi
+    if command -v systemctl >/dev/null && systemctl --user is-enabled office-kiosk-browser.service >/dev/null 2>&1; then ((++ENABLED_COUNT)); fi
+    if grep -q "office_kiosk\|kiosk_browser" "$HOME/.bashrc" 2>/dev/null; then ((++ENABLED_COUNT)); fi
+    if grep -q "office_kiosk\|kiosk_browser" "$HOME/.profile" 2>/dev/null; then ((++ENABLED_COUNT)); fi
+    if [[ -f "$HOME/.xinitrc" ]] && grep -q "office_kiosk\|kiosk_browser" "$HOME/.xinitrc" 2>/dev/null; then ((++ENABLED_COUNT)); fi
+    if [[ -f "$HOME/.xsessionrc" ]] && grep -q "office_kiosk\|kiosk_browser" "$HOME/.xsessionrc" 2>/dev/null; then ((++ENABLED_COUNT)); fi
+    if [[ -f "$HOME/.bash_profile" ]] && grep -q "office_kiosk\|kiosk_browser" "$HOME/.bash_profile" 2>/dev/null; then ((++ENABLED_COUNT)); fi
+    if [[ -f "/etc/rc.local" ]] && grep -q "office_kiosk\|kiosk_browser" "/etc/rc.local" 2>/dev/null; then ((++ENABLED_COUNT)); fi
+    if crontab -l 2>/dev/null | grep -q "office_kiosk\|kiosk_browser"; then ((++ENABLED_COUNT)); fi
     
     # Check for old services
     for service_name in "kiosk-browser.service" "kiosk_browser.service" "office-kiosk.service"; do
-        if [[ -f "/etc/systemd/system/$service_name" ]] && systemctl is-enabled "$service_name" >/dev/null 2>&1; then ((ENABLED_COUNT++)); fi
-        if [[ -f "$HOME/.config/systemd/user/$service_name" ]] && systemctl --user is-enabled "$service_name" >/dev/null 2>&1; then ((ENABLED_COUNT++)); fi
+        if [[ -f "/etc/systemd/system/$service_name" ]] && systemctl is-enabled "$service_name" >/dev/null 2>&1; then ((++ENABLED_COUNT)); fi
+        if [[ -f "$CONFIG_DIR/systemd/user/$service_name" ]] && systemctl --user is-enabled "$service_name" >/dev/null 2>&1; then ((++ENABLED_COUNT)); fi
     done
     
     if [[ $ENABLED_COUNT -gt 1 ]]; then
         error "❌ PROBLEM: $ENABLED_COUNT autostart methods enabled - this causes multiple instances!"
-        warning "   Run './install/manage_autostart.sh disable' to remove ALL autostart methods"
+        warning "   Run './install/manage_autostart.sh disable' to remove recognized entries; review legacy entries manually"
         warning "   Then run './install/manage_autostart.sh enable' to set up only one method"
     elif [[ $ENABLED_COUNT -eq 1 ]]; then
         success "✅ Good: Only 1 autostart method enabled"
@@ -210,161 +211,71 @@ check_autostart_status() {
 # Enable autostart
 enable_autostart() {
     log "Enabling autostart..."
-    chmod +x "$SCRIPT_DIR/setup_autostart.sh"
-    "$SCRIPT_DIR/setup_autostart.sh"
+    bash "$SCRIPT_DIR/setup_autostart.sh"
 }
 
 # Disable autostart
 disable_autostart() {
-    log "Disabling ALL autostart methods..."
-    
-    # Remove desktop autostart
-    DESKTOP_AUTOSTART="$HOME/.config/autostart/office-kiosk-browser.desktop"
-    if [[ -f "$DESKTOP_AUTOSTART" ]]; then
-        rm "$DESKTOP_AUTOSTART"
-        success "Removed desktop autostart"
-    fi
-    
-    # Remove any other desktop files in autostart
-    OTHER_DESKTOP_FILES=$(find "$HOME/.config/autostart/" -name "*kiosk*" -o -name "*office*" 2>/dev/null || true)
-    if [[ -n "$OTHER_DESKTOP_FILES" ]]; then
-        echo "$OTHER_DESKTOP_FILES" | while read -r file; do
-            if [[ -f "$file" ]]; then
-                rm "$file"
-                success "Removed $file"
-            fi
-        done
-    fi
-    
-    # Disable systemd user service
-    if command -v systemctl >/dev/null; then
-        if systemctl --user is-enabled office-kiosk-browser.service >/dev/null 2>&1; then
-            systemctl --user disable office-kiosk-browser.service
-            systemctl --user stop office-kiosk-browser.service 2>/dev/null || true
-            success "Disabled systemd user service"
-        fi
-        
-        # Remove user service file if it exists
-        USER_SERVICE_FILE="$HOME/.config/systemd/user/office-kiosk-browser.service"
-        if [[ -f "$USER_SERVICE_FILE" ]]; then
-            rm "$USER_SERVICE_FILE"
-            systemctl --user daemon-reload
-            success "Removed user service file"
+    log "Disabling recognized Office Kiosk Browser autostart entries..."
+    local desktop="$CONFIG_DIR/autostart/office-kiosk-browser.desktop"
+    if [ -f "$desktop" ]; then
+        if grep -Fxq 'Name=Office Kiosk Browser' "$desktop"; then
+            rm -- "$desktop"
+            success "Removed Office Kiosk Browser desktop autostart"
+        else
+            warning "Unrecognized desktop entry preserved: $desktop"
         fi
     fi
-    
-    # Remove from .bashrc
-    if grep -q "office_kiosk\|kiosk_browser" "$HOME/.bashrc" 2>/dev/null; then
-        # Create a backup
-        cp "$HOME/.bashrc" "$HOME/.bashrc.backup.$(date +%Y%m%d_%H%M%S)"
-        # Remove the autostart section
-        sed -i '/# Auto-start Office Kiosk Browser/,/^fi$/d' "$HOME/.bashrc"
-        # Also remove any other kiosk-related lines
-        sed -i '/office_kiosk\|kiosk_browser/d' "$HOME/.bashrc"
-        success "Removed .bashrc autostart (backup created)"
-    fi
-    
-    # Remove from .profile
-    if grep -q "office_kiosk\|kiosk_browser" "$HOME/.profile" 2>/dev/null; then
-        cp "$HOME/.profile" "$HOME/.profile.backup.$(date +%Y%m%d_%H%M%S)"
-        sed -i '/office_kiosk\|kiosk_browser/d' "$HOME/.profile"
-        success "Removed .profile autostart (backup created)"
-    fi
-    
-    # Remove from .xinitrc
-    if [[ -f "$HOME/.xinitrc" ]] && grep -q "office_kiosk\|kiosk_browser" "$HOME/.xinitrc" 2>/dev/null; then
-        cp "$HOME/.xinitrc" "$HOME/.xinitrc.backup.$(date +%Y%m%d_%H%M%S)"
-        sed -i '/office_kiosk\|kiosk_browser/d' "$HOME/.xinitrc"
-        success "Removed .xinitrc autostart (backup created)"
-    fi
-    
-    # Remove from .xsessionrc
-    if [[ -f "$HOME/.xsessionrc" ]] && grep -q "office_kiosk\|kiosk_browser" "$HOME/.xsessionrc" 2>/dev/null; then
-        cp "$HOME/.xsessionrc" "$HOME/.xsessionrc.backup.$(date +%Y%m%d_%H%M%S)"
-        sed -i '/office_kiosk\|kiosk_browser/d' "$HOME/.xsessionrc"
-        success "Removed .xsessionrc autostart (backup created)"
-    fi
-    
-    # Remove from .bash_profile
-    if [[ -f "$HOME/.bash_profile" ]] && grep -q "office_kiosk\|kiosk_browser" "$HOME/.bash_profile" 2>/dev/null; then
-        cp "$HOME/.bash_profile" "$HOME/.bash_profile.backup.$(date +%Y%m%d_%H%M%S)"
-        sed -i '/office_kiosk\|kiosk_browser/d' "$HOME/.bash_profile"
-        success "Removed .bash_profile autostart (backup created)"
-    fi
-    
-    # Check and warn about /etc/rc.local (needs sudo to remove)
-    if [[ -f "/etc/rc.local" ]] && grep -q "office_kiosk\|kiosk_browser" "/etc/rc.local" 2>/dev/null; then
-        warning "Found autostart in /etc/rc.local - requires manual removal with sudo:"
-        warning "sudo nano /etc/rc.local"
-        grep -n "office_kiosk\|kiosk_browser" "/etc/rc.local" 2>/dev/null | sed 's/^/  Remove line: /'
-    fi
-    
-    # Remove from crontab
-    CRON_CHECK=$(crontab -l 2>/dev/null | grep -v "office_kiosk\|kiosk_browser" || true)
-    if crontab -l 2>/dev/null | grep -q "office_kiosk\|kiosk_browser"; then
-        echo "$CRON_CHECK" | crontab -
-        success "Removed crontab autostart"
-    fi
-    
-    # Check old system-wide services
-    for service_name in "kiosk-browser.service" "kiosk_browser.service" "office-kiosk.service"; do
-        if [[ -f "/etc/systemd/system/$service_name" ]]; then
-            warning "Found old system-wide service: /etc/systemd/system/$service_name"
-            warning "Requires manual removal with sudo:"
-            warning "  sudo systemctl disable $service_name"
-            warning "  sudo systemctl stop $service_name"
-            warning "  sudo rm /etc/systemd/system/$service_name"
-            warning "  sudo systemctl daemon-reload"
+    local service="$CONFIG_DIR/systemd/user/office-kiosk-browser.service"
+    if [ -f "$service" ] && grep -Eq '^Description=Office Kiosk Browser( \(User Service\))?$' "$service"; then
+        if command -v systemctl >/dev/null; then
+            systemctl --user disable --now office-kiosk-browser.service || return 1
+            rm -- "$service"
+            systemctl --user daemon-reload || return 1
+        else
+            warning "Systemctl is unavailable; user service was preserved: $service"
         fi
-        
-        # Remove old user services
-        if [[ -f "$HOME/.config/systemd/user/$service_name" ]]; then
-            if systemctl --user is-enabled "$service_name" >/dev/null 2>&1; then
-                systemctl --user disable "$service_name"
-                systemctl --user stop "$service_name" 2>/dev/null || true
-            fi
-            rm "$HOME/.config/systemd/user/$service_name"
-            systemctl --user daemon-reload
-            success "Removed old user service: $service_name"
+    fi
+    # Legacy/custom launch blocks may contain unrelated shell logic. Report them,
+    # rather than deleting matching lines and leaving broken conditionals behind.
+    for profile in .bashrc .profile .bash_profile .xinitrc .xsessionrc; do
+        if grep -Eq 'office_kiosk|kiosk_browser' "$HOME/$profile" 2>/dev/null; then
+            warning "Review legacy autostart manually in $HOME/$profile (file preserved)"
         fi
     done
-    
-    success "All autostart methods disabled"
+    if crontab -l 2>/dev/null | grep -Eq 'office_kiosk|kiosk_browser'; then
+        warning "Review legacy kiosk cron entries manually (crontab preserved)"
+    fi
+    log "Other desktop files and system-wide services were preserved. Use status/trace to inspect them."
 }
 
 # Stop running instances
 stop_running_instances() {
-    log "Stopping all running Office Kiosk Browser instances..."
-    
-    if pgrep -f "kiosk_browser.py" >/dev/null; then
-        RUNNING_PIDS=$(pgrep -f "kiosk_browser.py")
-        echo "  Found running instances: $RUNNING_PIDS"
-        
-        # Stop gracefully first
-        pkill -f "kiosk_browser.py"
-        sleep 2
-        
-        # Force kill if still running
-        if pgrep -f "kiosk_browser.py" >/dev/null; then
-            warning "  Some instances still running, force killing..."
-            pkill -9 -f "kiosk_browser.py"
-            sleep 1
-        fi
-        
-        # Also clean up virtual keyboard processes
-        pkill -f "wvkbd-mobintl" 2>/dev/null || true
-        
-        if pgrep -f "kiosk_browser.py" >/dev/null; then
-            error "Failed to stop all instances"
-            return 1
-        else
-            success "All instances stopped"
-            return 0
-        fi
-    else
+    log "Stopping Office Kiosk Browser processes belonging to the current user..."
+    local uid pid child
+    uid=$(id -u)
+    local -a browsers=() keyboards=()
+    mapfile -t browsers < <(pgrep -u "$uid" -f '[k]iosk_browser\.py([[:space:]]|$)' || true)
+    if [ "${#browsers[@]}" -eq 0 ]; then
         log "No running instances found"
         return 0
     fi
+    # Capture only wvkbd children of these browsers before their parents exit.
+    for pid in "${browsers[@]}"; do
+        while IFS= read -r child; do
+            if [ -n "$child" ]; then keyboards+=("$child"); fi
+        done < <(pgrep -u "$uid" -P "$pid" -x wvkbd-mobintl || true)
+    done
+    for pid in "${keyboards[@]}" "${browsers[@]}"; do
+        kill -TERM "$pid" 2>/dev/null || true
+    done
+    sleep 2
+    for pid in "${keyboards[@]}" "${browsers[@]}"; do
+        if kill -0 "$pid" 2>/dev/null; then
+            kill -KILL "$pid" 2>/dev/null || true
+        fi
+    done
+    success "Stop requested for the current user's browser and its keyboard children"
 }
 
 # Debug running instances
@@ -487,7 +398,7 @@ usage() {
     echo
     echo "Commands:"
     echo "  enable   - Enable autostart (setup desktop autostart method)"
-    echo "  disable  - Disable ALL autostart methods (comprehensive cleanup)"
+    echo "  disable  - Disable recognized entries; preserve legacy and unrelated configuration"
     echo "  status   - Show current autostart status and running instances"
     echo "  stop     - Stop all running instances of the app"
     echo "  restart  - Stop all instances and start a new one"
@@ -520,8 +431,7 @@ main() {
             stop_running_instances
             echo
             log "Starting new instance..."
-            cd "$PROJECT_DIR"
-            python3 kiosk_browser.py --fullscreen &
+            bash "$PROJECT_DIR/scripts/start_kiosk.sh" --fullscreen &
             sleep 2
             check_autostart_status
             ;;

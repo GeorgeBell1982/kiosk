@@ -8,6 +8,11 @@ Helper scripts for system configuration, startup, and maintenance.
 - `start_kiosk.bat` - Windows batch file  
 - `start_kiosk.ps1` - Windows PowerShell script
 
+Startup launchers use the project virtual environment when it exists, otherwise
+system Python. Install dependencies before starting. Launch failures propagate as
+nonzero exit codes; no launcher installs packages, changes display settings, or
+waits for keyboard input. Linux startup uses `exec` so signals reach the browser.
+
 ## System Configuration
 
 - `setup_waveshare.sh` - Configure Waveshare touchscreen displays

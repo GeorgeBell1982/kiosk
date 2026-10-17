@@ -7,22 +7,22 @@ This directory contains automated scripts to help you install and build PyQt6 on
 ### Option 1: Quick Install (Recommended)
 Try multiple installation methods automatically:
 ```bash
-chmod +x build_scripts/quick_install_pyqt6.sh
-./build_scripts/quick_install_pyqt6.sh
+chmod +x install/quick_install_pyqt6.sh
+bash install/quick_install_pyqt6.sh
 ```
 
 ### Option 2: Full Build from Source
 If system packages don't work, build everything from source:
 ```bash
-chmod +x build_scripts/build_pyqt6_rpi.sh
-./build_scripts/build_pyqt6_rpi.sh
+chmod +x install/build_pyqt6_rpi.sh
+bash install/build_pyqt6_rpi.sh
 ```
 
 ### Option 3: Troubleshooting
 Diagnose and fix PyQt6 issues:
 ```bash
-chmod +x build_scripts/troubleshoot_pyqt6.sh
-./build_scripts/troubleshoot_pyqt6.sh
+chmod +x install/troubleshoot_pyqt6.sh
+bash install/troubleshoot_pyqt6.sh
 ```
 
 ## 📁 Scripts Overview
@@ -32,7 +32,7 @@ chmod +x build_scripts/troubleshoot_pyqt6.sh
 - Tries system packages first (fastest)
 - Falls back to piwheels (pre-compiled ARM packages)
 - Falls back to regular pip
-- Only builds from source as last resort
+- Source builds require `--build-from-source`
 - **Time**: 5-30 minutes depending on method
 
 ### `build_pyqt6_rpi.sh`
@@ -76,7 +76,7 @@ pip install PyQt6 PyQt6-WebEngine
 
 ### 4. Build from Source (Slow - 4-8 hours)
 ```bash
-./build_scripts/build_pyqt6_rpi.sh
+bash install/build_pyqt6_rpi.sh
 ```
 - **Pros**: Full control, custom optimizations
 - **Cons**: Very time consuming, complex
@@ -129,7 +129,7 @@ The build scripts automatically optimize based on your Pi model:
 ### "No module named PyQt6"
 ```bash
 # Try different installation methods
-./build_scripts/quick_install_pyqt6.sh
+bash install/quick_install_pyqt6.sh
 ```
 
 ### "Qt6 not found" or qmake6 missing
@@ -150,15 +150,15 @@ sudo swapon /swapfile
 ### YouTube still shows "outdated browser"
 ```bash
 # Test if Qt6 WebEngine is working:
-./build_scripts/troubleshoot_pyqt6.sh test
+bash install/troubleshoot_pyqt6.sh test
 # If WebEngine failed, try rebuilding with:
-./build_scripts/build_pyqt6_rpi.sh
+bash install/build_pyqt6_rpi.sh
 ```
 
 ### Build fails with compilation errors
 ```bash
 # Check system requirements and try troubleshooter:
-./build_scripts/troubleshoot_pyqt6.sh
+bash install/troubleshoot_pyqt6.sh
 # Update system packages:
 sudo apt update && sudo apt upgrade
 ```
@@ -212,21 +212,21 @@ python3 test_qt_version.py
 python3 kiosk_browser.py
 
 # Full diagnostic
-./build_scripts/troubleshoot_pyqt6.sh test
+bash install/troubleshoot_pyqt6.sh test
 ```
 
 ## 🆘 Getting Help
 
 1. **Run diagnostics first**:
    ```bash
-   ./build_scripts/troubleshoot_pyqt6.sh report
+   bash install/troubleshoot_pyqt6.sh report
    ```
 
 2. **Check the generated report** in `/tmp/pyqt6_diagnostic_*.txt`
 
 3. **Try different installation methods**:
    ```bash
-   ./build_scripts/quick_install_pyqt6.sh
+   bash install/quick_install_pyqt6.sh
    ```
 
 4. **For build issues**, check:

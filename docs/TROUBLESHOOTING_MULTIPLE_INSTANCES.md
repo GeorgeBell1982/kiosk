@@ -28,7 +28,7 @@ This will show you exactly which autostart methods are enabled and how many inst
 
 ### 1. Check Current Status
 ```bash
-./install/manage_autostart.sh status
+bash install/manage_autostart.sh status
 ```
 
 This shows:
@@ -38,38 +38,35 @@ This shows:
 
 ### 2. Stop All Running Instances
 ```bash
-./install/manage_autostart.sh stop
+bash install/manage_autostart.sh stop
 ```
 
 This will:
-- Stop all running browser instances
-- Clean up virtual keyboard processes
+- Stop browser instances belonging to the current user
+- Stop only virtual keyboard children of those browser processes
 - Ensure a clean state
 
-### 3. Disable ALL Autostart Methods
+### 3. Disable Recognized Autostart Entries
 ```bash
-./install/manage_autostart.sh disable
+bash install/manage_autostart.sh disable
 ```
 
-This removes autostart entries from:
-- Desktop autostart (`~/.config/autostart/`)
-- Systemd user services
-- Shell initialization files (`.bashrc`, `.profile`, `.bash_profile`, `.xinitrc`, `.xsessionrc`)
-- Crontab entries
-- Old systemd services
-
-**Note:** System-wide services (`/etc/systemd/system/`) require manual removal with sudo.
+This removes the recognized Office Kiosk Browser desktop entry and its recognized
+user service, respecting `XDG_CONFIG_HOME`. Unrelated desktop files, shell profiles,
+cron entries, old service names, and system-wide services are preserved. Follow
+the reported locations to review legacy launch blocks manually; do not remove
+matching lines from the middle of shell conditionals.
 
 ### 4. Enable Only One Autostart Method
 ```bash
-./install/manage_autostart.sh enable
+bash install/manage_autostart.sh enable
 ```
 
 This sets up the recommended desktop autostart method.
 
 ### 5. Verify the Fix
 ```bash
-./install/manage_autostart.sh status
+bash install/manage_autostart.sh status
 ```
 
 Should show:
@@ -83,7 +80,7 @@ Reboot your system and verify only one browser window opens.
 
 ### Detailed Process Information
 ```bash
-./install/manage_autostart.sh debug
+bash install/manage_autostart.sh debug
 ```
 
 This provides:
@@ -138,7 +135,7 @@ The script checks these locations for autostart entries:
 To prevent this issue in the future:
 
 1. **Only use one autostart method** - The desktop autostart is recommended
-2. **Run status checks** after making changes: `./install/manage_autostart.sh status`
+2. **Run status checks** after making changes: `bash install/manage_autostart.sh status`
 3. **Clean up properly** when testing different methods
 4. **Use the management script** instead of manually editing files
 
@@ -171,7 +168,7 @@ pkill -f kiosk_browser.py
 
 Then re-enable with:
 ```bash
-./install/manage_autostart.sh enable
+bash install/manage_autostart.sh enable
 ```
 
 ## Need Help?

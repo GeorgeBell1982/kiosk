@@ -6,17 +6,17 @@ Just run this on your Raspberry Pi:
 
 ```bash
 # Make executable (if needed)
-chmod +x build_scripts/*.sh
+chmod +x install/*.sh
 
 # Try automatic installation (recommended)
-./build_scripts/quick_install_pyqt6.sh
+bash install/quick_install_pyqt6.sh
 ```
 
 This will:
 1. ✅ Try system packages (fastest - 5 minutes)
 2. ✅ Try piwheels (fast - 10 minutes) 
 3. ✅ Try regular pip (medium - 30 minutes)
-4. ✅ Build from source if needed (slow - 4-8 hours)
+4. Source builds are attempted only with `--build-from-source` (can take hours).
 
 ## 📁 Available Scripts
 
@@ -32,7 +32,7 @@ If you specifically want to build from source:
 
 ```bash
 # Full manual build (takes several hours)
-./build_scripts/build_pyqt6_rpi.sh
+bash install/build_pyqt6_rpi.sh
 ```
 
 This will:
@@ -49,10 +49,10 @@ If you have issues:
 
 ```bash
 # Comprehensive diagnostics
-./build_scripts/troubleshoot_pyqt6.sh
+bash install/troubleshoot_pyqt6.sh
 
 # Generate detailed report
-./build_scripts/troubleshoot_pyqt6.sh report
+bash install/troubleshoot_pyqt6.sh report
 ```
 
 ## ✅ Success Check
@@ -108,5 +108,5 @@ cp kiosk_browser_qt5_backup.py kiosk_browser.py
 
 **Ready to try PyQt6 on your Pi? Start with:**
 ```bash
-./build_scripts/quick_install_pyqt6.sh
+bash install/quick_install_pyqt6.sh
 ```

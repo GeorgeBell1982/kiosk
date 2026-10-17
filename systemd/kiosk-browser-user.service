@@ -1,16 +1,16 @@
+# Template: adjust office_kiosk if the checkout has another name.
+# Prefer desktop autostart on desktops that do not activate graphical-session.target.
 [Unit]
 Description=Office Kiosk Browser
 After=graphical-session.target
-Wants=graphical-session.target
+PartOf=graphical-session.target
 
 [Service]
 Type=simple
-Environment=DISPLAY=:0
-Environment=XDG_RUNTIME_DIR=/run/user/1000
 WorkingDirectory=%h/office_kiosk
-ExecStart=%h/office_kiosk/scripts/start_kiosk.sh
-Restart=always
-RestartSec=10
+ExecStart=/bin/bash "%h/office_kiosk/scripts/start_kiosk.sh" --fullscreen
+Restart=on-failure
+RestartSec=5
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target
