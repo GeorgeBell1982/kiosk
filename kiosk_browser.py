@@ -10,10 +10,10 @@ import sys
 import logging
 import subprocess
 import os
-import time
+import shutil
 import tempfile
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
-                            QWidget, QPushButton, QFrame, QMessageBox, QLabel)
+                            QWidget, QPushButton, QFrame, QMessageBox, QLabel, QSizePolicy)
 
 # Try to import WebEngine
 try:
@@ -43,8 +43,8 @@ except ImportError:
     class QWebEngineProfile:
         pass
 
-from PyQt6.QtCore import QUrl, Qt, QSize, QTimer, QLockFile
-from PyQt6.QtGui import QFont, QIcon, QPixmap, QPainter
+from PyQt6.QtCore import QUrl, Qt, QSize, QTimer, QLockFile, QProcess
+from PyQt6.QtGui import QFont, QIcon, QPixmap, QPainter, QShortcut, QKeySequence
 
 # Try to import SVG support for Qt6
 try:
@@ -69,7 +69,11 @@ class KioskBrowser(QMainWindow):
         self.web_view = None  # Initialize early
         self.is_raspberry_pi = self.detect_raspberry_pi()
         self.keyboard_visible = False  # Track virtual keyboard state
-        self.keyboard_temp_windowed = False  # Track if we temporarily exited fullscreen for keyboard
+        self.keyboard_process = None
+        self.keyboard_stopping = False
+        self.keyboard_restore_fullscreen = False
+        self.keyboard_error = ""
+        self.closing = False
         
         # Log version information
         version_info = get_full_version_info()
@@ -83,6 +87,7 @@ class KioskBrowser(QMainWindow):
         
         self.setup_ui()
         self.setup_web_view()
+        self.setup_shortcuts()
         self.check_for_updates()  # Check for updates on startup
         self.load_home_page()
         
@@ -102,12 +107,10 @@ class KioskBrowser(QMainWindow):
         
         # Set window size optimized for 1024x600 displays (Waveshare touchscreen)
         if self.is_raspberry_pi:
-            # For Raspberry Pi with 1024x600 touchscreen - fit exactly
-            self.setGeometry(0, 0, 1024, 600)
-            # Debug keyboard environment on Pi
-            self.debug_keyboard_environment()
-            # Clean up any leftover keyboard processes from previous sessions
-            self.cleanup_keyboard_processes()
+            # Fit the current display rather than assuming a 1024x600 panel.
+            available = self.screen().availableGeometry()
+            self.setGeometry(available.x(), available.y(),
+                             min(1024, available.width()), min(600, available.height()))
         else:
             # For development on Windows - use smaller size to match Pi resolution
             self.setGeometry(100, 100, 1024, 600)
@@ -167,6 +170,13 @@ class KioskBrowser(QMainWindow):
             }
         """)
         
+    def setup_shortcuts(self):
+        for sequence, callback in [('F11', self.toggle_fullscreen),
+                                   ('F12', self.toggle_dev_tools),
+                                   ('Ctrl+R', self.web_view.reload)]:
+            shortcut = QShortcut(QKeySequence(sequence), self)
+            shortcut.activated.connect(callback)
+
     def load_icon(self, icon_name):
         """Load an SVG icon from the icons directory with Qt6 SVG support and robust fallbacks"""
         icon_path = os.path.join(os.path.dirname(__file__), 'icons', f'{icon_name}.svg')
@@ -260,10 +270,8 @@ class KioskBrowser(QMainWindow):
     def create_control_panel(self, main_layout):
         """Create the control panel with controls on left and shortcuts on right"""
         control_frame = QFrame()
-        # Use percentage of window height instead of fixed pixels
-        window_height = self.height()
-        window_width = self.width()
-        control_height = max(120, int(window_height * 0.20))  # 20% of window height, minimum 120px for 2-row layout
+        # Reserve enough vertical space for two rows of touch targets.
+        control_height = 160  # Two rows of touch targets plus frame padding
         control_frame.setFixedHeight(control_height)
         control_frame.setStyleSheet("""
             QFrame {
@@ -275,7 +283,7 @@ class KioskBrowser(QMainWindow):
         """)
         control_layout = QHBoxLayout()
         control_layout.setContentsMargins(5, 5, 5, 5)  # Increased margins
-        control_layout.setSpacing(60)  # Increased space between groups
+        control_layout.setSpacing(12)
         control_frame.setLayout(control_layout)
         
         # Add version label as a small overlay in the top-left corner
@@ -297,9 +305,7 @@ class KioskBrowser(QMainWindow):
         # Left side - Navigation controls group
         nav_controls_group = QFrame()
         # Navigation controls group height - taller for 2-row layout
-        nav_width_percent = 0.5 if self.is_raspberry_pi else 0.4  # 50% vs 40% of window width
-        nav_height = int(window_height * 0.16)  # 16% of window height for 2-row button layout
-        nav_controls_group.setFixedWidth(int(window_width * nav_width_percent))
+        nav_height = control_height - 40
         nav_controls_group.setFixedHeight(nav_height)
         nav_controls_group.setStyleSheet("""
             QFrame {
@@ -355,38 +361,15 @@ class KioskBrowser(QMainWindow):
             }}
         """
         
-        # Create navigation buttons with proportional size for 2-row layout
-        # Button size based on available space in 2 rows - Pi optimized
-        nav_available_width = int(window_width * nav_width_percent) - 20  # Account for margins
-        
-        if self.is_raspberry_pi:
-            # Smaller buttons for Pi's compact screen (typically 1024x600)
-            button_width = min(80, int(nav_available_width / 3.2))  # Slightly more space between buttons
-            button_height = min(50, int(nav_height / 2.5))  # Smaller height to prevent overlap
-        else:
-            # Standard sizing for larger screens
-            button_width = int(nav_available_width / 3)  # 3 buttons per row
-            button_height = int((nav_height - 20) / 2)  # 2 rows, account for margins
-            
-        button_size = (button_width, button_height)
-        
-        # Debug info for Pi sizing
-        if self.is_raspberry_pi:
-            logging.info(f"Pi button sizing: window={window_width}x{window_height}, nav_width={int(window_width * nav_width_percent)}, button={button_width}x{button_height}")
-        
-        # Determine icon size based on platform
-        if self.is_raspberry_pi:
-            icon_size_ratio = 0.35  # Slightly larger icons for small Pi buttons
-        else:
-            icon_size_ratio = 0.25  # Standard icon size
-            
-        icon_size = QSize(int(button_width * icon_size_ratio), int(button_height * icon_size_ratio))
-        
+        # Layouts distribute the available width; keep touch targets usable at 800px.
+        icon_size = QSize(24, 24)
+
         self.back_btn = QPushButton()
         self.back_btn.setIcon(self.load_icon('back'))
         self.back_btn.setIconSize(icon_size)
         self.back_btn.clicked.connect(self.web_view.back)
-        self.back_btn.setFixedSize(*button_size)
+        self.back_btn.setMinimumWidth(44)
+        self.back_btn.setFixedHeight(44)
         self.back_btn.setStyleSheet(nav_button_style)
         self.back_btn.setToolTip("Go Back")
         
@@ -394,7 +377,8 @@ class KioskBrowser(QMainWindow):
         self.forward_btn.setIcon(self.load_icon('forward'))
         self.forward_btn.setIconSize(icon_size)
         self.forward_btn.clicked.connect(self.web_view.forward)
-        self.forward_btn.setFixedSize(*button_size)
+        self.forward_btn.setMinimumWidth(44)
+        self.forward_btn.setFixedHeight(44)
         self.forward_btn.setStyleSheet(nav_button_style)
         self.forward_btn.setToolTip("Go Forward")
         
@@ -402,7 +386,8 @@ class KioskBrowser(QMainWindow):
         self.refresh_btn.setIcon(self.load_icon('refresh'))
         self.refresh_btn.setIconSize(icon_size)
         self.refresh_btn.clicked.connect(self.web_view.reload)
-        self.refresh_btn.setFixedSize(*button_size)
+        self.refresh_btn.setMinimumWidth(44)
+        self.refresh_btn.setFixedHeight(44)
         self.refresh_btn.setStyleSheet(nav_button_style)
         self.refresh_btn.setToolTip("Refresh Page")
         
@@ -410,7 +395,8 @@ class KioskBrowser(QMainWindow):
         self.home_btn.setIcon(self.load_icon('home'))
         self.home_btn.setIconSize(icon_size)
         self.home_btn.clicked.connect(self.load_home_page)
-        self.home_btn.setFixedSize(*button_size)
+        self.home_btn.setMinimumWidth(44)
+        self.home_btn.setFixedHeight(44)
         self.home_btn.setStyleSheet(nav_button_style)
         self.home_btn.setToolTip("Go Home")
         
@@ -418,7 +404,8 @@ class KioskBrowser(QMainWindow):
         self.fullscreen_btn.setIcon(self.load_icon('fullscreen'))
         self.fullscreen_btn.setIconSize(icon_size)
         self.fullscreen_btn.clicked.connect(self.toggle_fullscreen)
-        self.fullscreen_btn.setFixedSize(*button_size)
+        self.fullscreen_btn.setMinimumWidth(44)
+        self.fullscreen_btn.setFixedHeight(44)
         self.fullscreen_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: #9b59b6;
@@ -453,7 +440,8 @@ class KioskBrowser(QMainWindow):
             self.keyboard_btn.setIcon(self.load_icon('keyboard'))
             self.keyboard_btn.setIconSize(icon_size)
             self.keyboard_btn.clicked.connect(self.toggle_virtual_keyboard)
-            self.keyboard_btn.setFixedSize(*button_size)
+            self.keyboard_btn.setMinimumWidth(44)
+            self.keyboard_btn.setFixedHeight(44)
             self.keyboard_visible = False  # Track keyboard state
             self.update_keyboard_button_style()
             self.keyboard_btn.setToolTip("Toggle Virtual Keyboard")
@@ -464,7 +452,8 @@ class KioskBrowser(QMainWindow):
             self.shutdown_btn.setIcon(self.load_icon('shutdown'))
             self.shutdown_btn.setIconSize(icon_size)
             self.shutdown_btn.clicked.connect(self.shutdown_pi)
-            self.shutdown_btn.setFixedSize(*button_size)
+            self.shutdown_btn.setMinimumWidth(44)
+            self.shutdown_btn.setFixedHeight(44)
             self.shutdown_btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: #e74c3c;
@@ -492,6 +481,7 @@ class KioskBrowser(QMainWindow):
         
         # Right side - Shortcuts group
         shortcuts_group = QFrame()
+        shortcuts_group.setFixedHeight(nav_height)
         shortcuts_group.setStyleSheet("""
             QFrame {
                 background-color: rgba(44, 62, 80, 0.8);
@@ -521,18 +511,15 @@ class KioskBrowser(QMainWindow):
             ("YOUTUBE", "https://www.youtube.com", "#c0392b", "youtube")
         ]
         
-        # Calculate shortcut button dimensions for 3x2 grid
-        shortcuts_width = int(window_width * 0.35)  # Available width for shortcuts
-        shortcut_button_width = int((shortcuts_width - 40) / 3)  # 3 buttons per top row, account for margins
-        shortcut_button_height = int((nav_height - 30) / 2)  # Same height as nav section, 2 rows
-        shortcut_font_size = max(8, int(control_height * 0.06))  # Smaller font for icon+text buttons
-        
+        shortcut_font_size = 10
+
         self.shortcut_buttons = []
         for i, (name, url, color, icon_name) in enumerate(shortcuts):
             btn = QPushButton(name)
             btn.setIcon(self.load_icon(icon_name))
-            btn.setIconSize(QSize(int(shortcut_button_width * 0.3), int(shortcut_button_height * 0.3)))
-            btn.setFixedSize(shortcut_button_width, shortcut_button_height)
+            btn.setIconSize(QSize(18, 18))
+            btn.setMinimumWidth(44)
+            btn.setFixedHeight(44)
             btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {color};
@@ -569,9 +556,13 @@ class KioskBrowser(QMainWindow):
         shortcuts_layout.addLayout(shortcuts_bottom_row)
         
         # Add groups to main layout
-        control_layout.addWidget(nav_controls_group)
-        control_layout.addStretch()  # This creates flexible space between groups
-        control_layout.addWidget(shortcuts_group)
+        control_layout.addWidget(nav_controls_group, 4)
+        control_layout.addWidget(shortcuts_group, 3)
+
+        for button in control_frame.findChildren(QPushButton):
+            # Taps should not steal focus from a web form; Tab navigation still works.
+            button.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+            button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         
         main_layout.addWidget(control_frame)
         
@@ -1139,239 +1130,125 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
             
     def toggle_fullscreen(self):
         """Toggle between fullscreen and windowed mode"""
+        # An explicit choice overrides the keyboard's automatic fullscreen restore.
+        self.keyboard_restore_fullscreen = False
         if self.isFullScreen():
             self.showNormal()
         else:
             self.showFullScreen()
     
     def toggle_virtual_keyboard(self):
-        """Toggle the virtual keyboard (wvkbd) on Raspberry Pi"""
+        """Start or stop only the keyboard process owned by this browser."""
         if not self.is_raspberry_pi:
             QMessageBox.warning(self, "Not Available", "Virtual keyboard is only available on Raspberry Pi.")
             return
-        
-        try:
-            # Check if wvkbd is installed first
-            result = subprocess.run(['which', 'wvkbd-mobintl'], capture_output=True, text=True)
-            if result.returncode != 0:
-                self.show_keyboard_install_dialog()
-                return
-            
-            # Check if keyboard is actually running
-            result = subprocess.run(['pgrep', 'wvkbd-mobintl'], capture_output=True, text=True)
-            keyboard_running = result.returncode == 0
-            
-            if keyboard_running:
-                # Hide keyboard - kill all instances to prevent conflicts
-                logging.info("Hiding virtual keyboard (wvkbd)")
-                subprocess.run(['pkill', '-f', 'wvkbd-mobintl'], check=False)
-                # Give it a moment to fully terminate
-                time.sleep(0.5)
-                self.keyboard_visible = False
-                
-                # Restore fullscreen if we temporarily exited for keyboard visibility
-                if self.keyboard_temp_windowed:
-                    logging.info("Restoring fullscreen mode after hiding keyboard")
-                    self.showFullScreen()
-                    self.keyboard_temp_windowed = False
-            else:
-                # Show keyboard - try different methods for Wayland compatibility
-                logging.info("Showing virtual keyboard (wvkbd) on Wayland")
-                
-                # Detect if we're on Wayland
-                wayland_display = os.environ.get('WAYLAND_DISPLAY')
-                xdg_session_type = os.environ.get('XDG_SESSION_TYPE', '').lower()
-                is_wayland = wayland_display or xdg_session_type == 'wayland'
-                
-                if is_wayland:
-                    # Wayland-optimized command with compact, movable keyboard
-                    cmd = [
-                        'wvkbd-mobintl',
-                        '-L', '180',  # Shorter landscape height (was 300)
-                        '--bg', '333333cc',  # Semi-transparent dark background
-                        '--fg', 'ffffff',     # White text
-                        '--layer', 'overlay',  # Use overlay layer to appear above fullscreen apps
-                        '--anchor', 'bottom'   # Anchor to bottom to leave text area clear
-                    ]
-                    logging.info("Using compact Wayland keyboard (180px height, bottom-anchored)")
-                else:
-                    # X11 fallback with compact keyboard
-                    cmd = [
-                        'wvkbd-mobintl',
-                        '-L', '160',  # Shorter landscape height for X11
-                        '--fg', 'white'
-                    ]
-                    logging.info("Using compact X11 keyboard (160px height)")
-                
-                # Start keyboard process
-                try:
-                    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    
-                    # Quick check if process started successfully
-                    time.sleep(0.1)
-                    if process.poll() is not None:
-                        # Process died immediately, try without anchor if that was the issue
-                        if '--anchor' in cmd:
-                            logging.warning("Anchored keyboard failed, trying without anchor...")
-                            cmd_no_anchor = [arg for arg in cmd if arg != '--anchor' and arg != 'bottom']
-                            process = subprocess.Popen(cmd_no_anchor, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                            time.sleep(0.1)
-                        
-                        # If still failing, try basic fallback
-                        if process.poll() is not None:
-                            logging.warning("Compact keyboard failed, trying basic wvkbd")
-                            process = subprocess.Popen(['wvkbd-mobintl'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                        
-                        # If we're in fullscreen and keyboard fails to overlay, temporarily exit fullscreen
-                        if self.isFullScreen():
-                            logging.info("Temporarily exiting fullscreen for virtual keyboard visibility")
-                            self.showNormal()
-                            self.keyboard_temp_windowed = True
-                        
-                except Exception as e:
-                    logging.error(f"Failed to start wvkbd: {e}")
-                    # Try absolute basic fallback
-                    process = subprocess.Popen(['wvkbd-mobintl'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    
-                    # If we're in fullscreen, temporarily exit for keyboard visibility
-                    if self.isFullScreen():
-                        logging.info("Temporarily exiting fullscreen for virtual keyboard visibility")
-                        self.showNormal()
-                        self.keyboard_temp_windowed = True
-                
-                # Give it a moment to start and check if it's actually running
-                QTimer.singleShot(500, lambda: self.verify_keyboard_started(process))
-                self.keyboard_visible = True
-            
-            # Update button appearance
-            self.update_keyboard_button_style()
-            
-        except FileNotFoundError:
-            # wvkbd not installed
-            logging.error("wvkbd not found - virtual keyboard not available")
-            QMessageBox.warning(
-                self,
-                "Virtual Keyboard Not Available",
-                "wvkbd (virtual keyboard) is not installed.\n\n"
-                "To install it:\n"
-                "sudo apt update\n"
-                "sudo apt install wvkbd"
-            )
-        except Exception as e:
-            logging.error(f"Error toggling virtual keyboard: {e}")
-            QMessageBox.warning(self, "Keyboard Error", f"Failed to toggle virtual keyboard: {e}")
-    
+        if self.closing:
+            return
+        if self.keyboard_process is not None:
+            self.stop_virtual_keyboard()
+            return
+        if not (os.environ.get('WAYLAND_DISPLAY') or
+                os.environ.get('XDG_SESSION_TYPE', '').lower() == 'wayland'):
+            QMessageBox.information(self, "Wayland Required",
+                                    "wvkbd requires a Wayland desktop and a compatible compositor. "
+                                    "For an X11 desktop, use an X11 virtual keyboard such as Onboard.")
+            return
+        executable = shutil.which('wvkbd-mobintl')
+        if executable is None:
+            self.show_keyboard_install_dialog()
+            return
+
+        process = QProcess(self)
+        self.keyboard_process = process
+        self.keyboard_stopping = False
+        self.keyboard_error = ""
+        # These height options work in both older packaged wvkbd and current releases.
+        # The keyboard already anchors itself at the bottom; do not invent layer flags.
+        process.setProgram(executable)
+        process.setArguments(['-H', '180', '-L', '180'])
+        process.setStandardInputFile(QProcess.nullDevice())
+        process.setStandardOutputFile(QProcess.nullDevice())
+        process.readyReadStandardError.connect(lambda: self.read_keyboard_error(process))
+        process.started.connect(lambda: self.keyboard_started(process))
+        process.finished.connect(lambda code, status: self.keyboard_finished(process, code, status))
+        process.errorOccurred.connect(lambda error: self.keyboard_process_error(process, error))
+        process.start()
+
     def show_keyboard_install_dialog(self):
-        """Show dialog with instructions to install wvkbd"""
-        QMessageBox.information(
-            self,
-            "Virtual Keyboard Not Installed",
-            "wvkbd (virtual keyboard) is not installed.\n\n"
-            "To install it:\n"
-            "sudo apt update\n"
-            "sudo apt install wvkbd\n\n"
-            "Or run the quick install script:\n"
-            "./install/quick_install_pyqt6.sh"
-        )
-    
-    def verify_keyboard_started(self, process):
-        """Verify that the keyboard process started successfully"""
-        try:
-            # Check if process is still running
-            if process.poll() is None:
-                # Process is running, check if we can find it
-                result = subprocess.run(['pgrep', 'wvkbd-mobintl'], capture_output=True, text=True)
-                if result.returncode == 0:
-                    logging.info("Virtual keyboard started successfully")
-                    self.ensure_keyboard_visible()
-                else:
-                    logging.warning("Keyboard process started but not found in process list")
-                    self.keyboard_visible = False
-            else:
-                # Process died, check stderr for errors
-                _, stderr = process.communicate()
-                error_msg = stderr.decode() if stderr else "Unknown error"
-                logging.error(f"Keyboard process failed to start: {error_msg}")
-                self.keyboard_visible = False
-                
-                # Show user-friendly error message
-                QMessageBox.warning(
-                    self,
-                    "Keyboard Failed to Start",
-                    f"The virtual keyboard failed to start.\n\n"
-                    f"This may be because:\n"
-                    f"• Wayland compositor doesn't support virtual keyboards\n"
-                    f"• wvkbd needs additional permissions\n"
-                    f"• Display server issues\n\n"
-                    f"Try running manually: wvkbd-mobintl -L"
-                )
-        except Exception as e:
-            logging.error(f"Error verifying keyboard start: {e}")
-            self.keyboard_visible = False
-        
-        # Update button style regardless
+        QMessageBox.information(self, "Virtual Keyboard Not Installed",
+                                "Install wvkbd with:\nsudo apt update\nsudo apt install wvkbd\n\n"
+                                "Then use the keyboard button in a Wayland desktop session.")
+
+    def keyboard_started(self, process):
+        if process is not self.keyboard_process:
+            return
+        if self.closing or self.keyboard_stopping:
+            process.kill()
+            return
+        if self.isFullScreen():
+            self.keyboard_restore_fullscreen = True
+            # Maximized windows respect the keyboard's compositor exclusive zone.
+            self.showMaximized()
+        self.keyboard_visible = True
         self.update_keyboard_button_style()
-    
-    def ensure_keyboard_visible(self):
-        """Ensure the virtual keyboard is visible and on top"""
-        try:
-            # On Wayland, window management is handled by the compositor
-            wayland_display = os.environ.get('WAYLAND_DISPLAY')
-            xdg_session_type = os.environ.get('XDG_SESSION_TYPE', '').lower()
-            is_wayland = wayland_display or xdg_session_type == 'wayland'
-            
-            if is_wayland:
-                # On Wayland, we can't directly manipulate windows, but we can try some tricks
-                logging.info("Wayland detected - keyboard window management handled by compositor")
-                # Give focus back to browser after keyboard starts
-                self.activateWindow()
-                self.raise_()
-            else:
-                # On X11, try traditional window management
-                try:
-                    subprocess.run(['wmctrl', '-a', 'wvkbd'], check=False)
-                except FileNotFoundError:
-                    # wmctrl not available, that's okay
-                    pass
-        except Exception as e:
-            logging.debug(f"Could not manage keyboard window: {e}")
-    
-    def debug_keyboard_environment(self):
-        """Debug information about keyboard environment"""
-        logging.info("=== Keyboard Environment Debug ===")
-        logging.info(f"XDG_SESSION_TYPE: {os.environ.get('XDG_SESSION_TYPE', 'not set')}")
-        logging.info(f"WAYLAND_DISPLAY: {os.environ.get('WAYLAND_DISPLAY', 'not set')}")
-        logging.info(f"DISPLAY: {os.environ.get('DISPLAY', 'not set')}")
-        
-        # Check if wvkbd is available
-        result = subprocess.run(['which', 'wvkbd-mobintl'], capture_output=True, text=True)
-        if result.returncode == 0:
-            logging.info(f"wvkbd-mobintl found at: {result.stdout.strip()}")
-            
-            # Try to get version info
-            version_result = subprocess.run(['wvkbd-mobintl', '--help'], capture_output=True, text=True)
-            if version_result.returncode == 0:
-                logging.info("wvkbd help output available")
-            else:
-                logging.warning("Could not get wvkbd help/version")
+        self.web_view.setFocus(Qt.FocusReason.OtherFocusReason)
+
+    def read_keyboard_error(self, process):
+        # Drain stderr while the keyboard runs, retaining only a short diagnostic tail.
+        output = bytes(process.readAllStandardError()).decode('utf-8', errors='replace')
+        if process is self.keyboard_process:
+            self.keyboard_error = (self.keyboard_error + output)[-2048:]
+
+    def keyboard_process_error(self, process, error):
+        if error == QProcess.ProcessError.FailedToStart and process is self.keyboard_process:
+            self.keyboard_error = process.errorString()
+            self.keyboard_finished(process, -1, QProcess.ExitStatus.CrashExit)
+
+    def keyboard_finished(self, process, exit_code, exit_status):
+        if process is not self.keyboard_process:
+            return
+        self.read_keyboard_error(process)
+        stopped = self.keyboard_stopping or self.closing
+        self.keyboard_process = None
+        self.keyboard_visible = False
+        self.keyboard_stopping = False
+        self.update_keyboard_button_style()
+        process.deleteLater()
+        restore = self.keyboard_restore_fullscreen
+        self.keyboard_restore_fullscreen = False
+        if restore and not self.closing:
+            self.showFullScreen()
+        if not stopped and (exit_code != 0 or exit_status == QProcess.ExitStatus.CrashExit):
+            logging.warning("Virtual keyboard failed: %s", self.keyboard_error)
+            QMessageBox.warning(self, "Keyboard Failed to Start",
+                                "The virtual keyboard stopped unexpectedly. Check that the Wayland "
+                                "compositor supports wlr-layer-shell and virtual-keyboard protocols.\n\n"
+                                + self.keyboard_error)
+
+    def stop_virtual_keyboard(self, force=False):
+        """Stop asynchronously, escalating to kill if the owned process ignores TERM."""
+        process = self.keyboard_process
+        if process is None or (self.keyboard_stopping and not force):
+            return
+        self.keyboard_stopping = True
+        self.keyboard_visible = False
+        self.update_keyboard_button_style()
+        if force or process.state() == QProcess.ProcessState.Starting:
+            process.kill()
         else:
-            logging.error("wvkbd-mobintl not found in PATH")
-        
-        # Check for alternative keyboards
-        for kb in ['onboard', 'florence', 'squeekboard']:
-            result = subprocess.run(['which', kb], capture_output=True, text=True)
-            if result.returncode == 0:
-                logging.info(f"Alternative keyboard found: {kb}")
-        
-        logging.info("=== End Keyboard Debug ===")
-    
+            process.terminate()
+            timer = QTimer(process)
+            timer.setSingleShot(True)
+            timer.timeout.connect(process.kill)
+            timer.start(1000)
+
     def update_keyboard_button_style(self):
         """Update the keyboard button style based on current state"""
         if not hasattr(self, 'keyboard_btn'):
             return
         
         # Get the current font size from the nav buttons
-        font_size = max(14, int(self.height() * 0.06))
+        font_size = 14
         
         if self.keyboard_visible:
             # Keyboard is visible - show as active
@@ -1460,28 +1337,18 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
     
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts"""
-        if event.key() == Qt.Key.Key_F11:
-            self.toggle_fullscreen()
-        elif event.key() == Qt.Key.Key_Escape and self.isFullScreen():
+        if event.key() == Qt.Key.Key_Escape and self.isFullScreen():
+            self.keyboard_restore_fullscreen = False
             self.showNormal()
-        elif event.key() == Qt.Key.Key_F12:
-            # Toggle dev tools for debugging
-            self.toggle_dev_tools()
-        elif event.modifiers() == Qt.KeyboardModifier.ControlModifier:
-            if event.key() == Qt.Key.Key_R:
-                self.web_view.reload()
+            event.accept()
+            return
         super().keyPressEvent(event)
     
     def closeEvent(self, event):
         """Clean up when the application is closing"""
-        if self.is_raspberry_pi and hasattr(self, 'keyboard_visible') and self.keyboard_visible:
-            # Hide virtual keyboard when closing
-            logging.info("Hiding virtual keyboard on application close")
-            try:
-                subprocess.run(['pkill', 'wvkbd-mobintl'], check=False)
-            except Exception as e:
-                logging.warning(f"Could not hide virtual keyboard on close: {e}")
-        
+        self.closing = True
+        self.stop_virtual_keyboard(force=True)
+
         if hasattr(self, 'dev_tools'):
             self.dev_tools.close()
         # The updater retains its own output handle until it exits, even if we close.
@@ -1515,20 +1382,6 @@ Qt6 WebEngine provides better SSL/TLS support than Qt5.
                 logging.warning("Developer tools not available")
         except Exception as e:
             logging.error(f"Error opening developer tools: {e}")
-    
-    def cleanup_keyboard_processes(self):
-        """Clean up any leftover keyboard processes from previous sessions"""
-        try:
-            logging.info("Cleaning up any leftover virtual keyboard processes...")
-            # Kill any existing wvkbd processes
-            result = subprocess.run(['pkill', '-f', 'wvkbd-mobintl'], capture_output=True, text=True)
-            if result.returncode == 0:
-                logging.info("Cleaned up existing wvkbd processes")
-                time.sleep(0.5)  # Give processes time to terminate
-            else:
-                logging.info("No existing wvkbd processes found")
-        except Exception as e:
-            logging.warning(f"Could not clean up keyboard processes: {e}")
     
     def check_for_updates(self):
         """Check for updates and show status notification"""

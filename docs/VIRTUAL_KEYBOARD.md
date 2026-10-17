@@ -1,120 +1,81 @@
-# Virtual Keyboard Setup for Office Kiosk Browser
+# Virtual Keyboard and Touchscreen Behavior
 
-The Office Kiosk Browser includes support for toggling a virtual keyboard on Raspberry Pi using `wvkbd` (Wayland Virtual Keyboard).
+The Raspberry Pi keyboard button starts `wvkbd-mobintl` in a Wayland desktop.
+The compositor must support the wlr-layer-shell and virtual-keyboard protocols.
+X11 sessions display an explanation instead of attempting to run a Wayland
+keyboard; use an X11 keyboard such as Onboard for those desktops.
 
 ## Installation
 
-### Automatic Installation (Raspberry Pi OS Bookworm+)
 ```bash
 sudo apt update
 sudo apt install wvkbd
 ```
 
-### Manual Installation (if not available in repositories)
-```bash
-# Install dependencies
-sudo apt install build-essential meson ninja-build pkg-config
-sudo apt install libwayland-dev libxkbcommon-dev libcairo2-dev libpango1.0-dev
+For source builds and compositor requirements, follow the
+[upstream wvkbd instructions](https://github.com/jjsullivan5196/wvkbd).
 
-# Clone and build wvkbd
-git clone https://github.com/jjsullivan5196/wvkbd.git
-cd wvkbd
-meson build
-ninja -C build
-sudo ninja -C build install
+## Using the keyboard
+
+1. Tap a text field in the browser.
+2. Tap the keyboard button. The text field keeps focus.
+3. Type, then tap the keyboard button again to close it.
+
+The button turns orange after the process starts and gray when it stops. Starting
+and stopping are asynchronous, so taps do not block browser interaction. Rapid
+taps can cancel startup without launching a second process.
+
+The browser owns its keyboard process. It does not scan for or stop keyboards
+started by other applications, including at startup. Unexpected exits reset the
+button and report a short diagnostic. Closing the browser stops its keyboard;
+a process that ignores normal termination is killed after one second.
+
+## Fullscreen and layout
+
+When the keyboard starts from fullscreen, the browser temporarily maximizes so
+that the compositor can resize it around the keyboard's reserved screen area.
+Fullscreen is restored when the keyboard exits. An explicit fullscreen toggle
+while typing overrides that automatic restoration. Windowed sessions keep their
+window state.
+
+The toolbar uses expanding layouts and buttons at least 44 logical pixels high
+and wide. It fits an 800px-wide display and adapts when resized. Toolbar taps
+preserve page focus; physical Tab navigation remains available. F11, F12, and
+Ctrl+R also work while a page has focus.
+
+The keyboard command is:
+
+```bash
+wvkbd-mobintl -H 180 -L 180
 ```
 
-## Usage
+`-H` sets the portrait height and `-L` sets the landscape height. wvkbd handles
+orientation and bottom anchoring itself. The application uses neither the
+unsupported `--anchor`/`--layer` options nor `wmctrl` window activation.
 
-1. **Start the Office Kiosk Browser**: `python3 kiosk_browser.py`
-2. **Toggle Keyboard**: Click the keyboard button (⌨) in the control panel
-3. **Button States**:
-   - **Gray**: Keyboard hidden
-   - **Orange**: Keyboard visible
+## Troubleshooting and testing
 
-## Features
+If startup fails, check that you are in a supported Wayland desktop and that
+`wvkbd-mobintl` is installed. Run the command above in a terminal to see its
+compositor diagnostics. Do not disable browser security settings to troubleshoot
+the keyboard.
 
-- **Compact Design**: Reduced height (180px on Wayland, 160px on X11) to leave more text visible
-- **Smart Positioning**: Bottom-anchored when possible to keep text area clear  
-- **Automatic positioning**: Keyboard appears at the bottom of the screen
-- **Landscape layout**: Optimized for touchscreen use
-- **Fullscreen Compatibility**: Overlay layer support or temporary fullscreen exit
-- **Environment Detection**: Wayland vs X11 optimized settings
-- **Clean shutdown**: Keyboard automatically hides when app closes
-- **Visual feedback**: Button changes color to show keyboard state
-- **Touch-friendly**: Large keys suitable for finger input
-- **Multiple Fallbacks**: Automatic fallback modes if advanced features aren't supported
+The manual smoke test runs a keyboard for five seconds and stops only that child:
 
-## Keyboard Layout
+```bash
+bash tests/test_virtual_keyboard.sh
+```
 
-wvkbd provides a mobile-style keyboard with:
-- QWERTY layout in landscape mode
-- Number row
-- Common symbols and punctuation
-- Backspace, Enter, and Space keys
-- Shift for uppercase letters
+It does not install packages or kill existing keyboards. To check the compositor,
+tap an input field before launching the test, then verify actual key delivery.
 
-## Troubleshooting
+Automated headless tests cover process ownership and failures, rapid taps,
+fullscreen restoration, toolbar geometry, text-field focus, and keyboard shortcuts:
 
-### Keyboard Not Visible
-If the virtual keyboard doesn't appear when clicked:
+```bash
+python -m unittest discover -s tests -p test_touch_keyboard.py -v
+```
 
-1. **Check if wvkbd is running**:
-   ```bash
-   pgrep wvkbd-mobintl
-   ```
-
-2. **Manually test keyboard**:
-   ```bash
-   # Compact keyboard for better text access (Wayland)
-   wvkbd-mobintl -L 180 --bg 333333cc --fg ffffff --layer overlay --anchor bottom
-   
-   # Compact keyboard fallback
-   wvkbd-mobintl -L 180 --layer overlay
-   
-   # X11 compact version
-   wvkbd-mobintl -L 160 --fg white
-   ```
-
-3. **Fullscreen Application Issues**:
-   - **Problem**: Keyboard appears behind fullscreen browser
-   - **Solutions**:
-     - The app automatically detects this and temporarily exits fullscreen
-     - Use `--layer overlay` flag for better Wayland compatibility
-     - Update wvkbd to latest version for best layer support
-
-4. **Check window manager compatibility**:
-   - The keyboard works best with Wayland compositors
-   - On X11, you may need additional window manager tools like `wmctrl`
-   - Install wmctrl for better window management: `sudo apt install wmctrl`
-
-5. **If keyboard still appears behind browser**:
-   - Click the fullscreen toggle button (⛶) to exit fullscreen temporarily
-   - Try clicking in a text field first, then toggle the keyboard
-   - Switch to a different virtual terminal and back: `Ctrl+Alt+F2`, then `Ctrl+Alt+F7`
-
-6. **Alternative keyboard activation**:
-   ```bash
-   # Kill any existing keyboard
-   pkill wvkbd-mobintl
-   
-   # Start with basic settings
-   wvkbd-mobintl -L -H 280
-   ```
-
-### Button Icons Too Large
-If navigation button icons appear too large:
-- The latest version reduces icon size from 40% to 25% of button size
-- Icons should now better match the SVG designs
-- Restart the application after updates
-
-## Configuration
-
-The keyboard is configured with optimal settings for the kiosk browser:
-- Height: 280-300 pixels (Wayland uses 300px, X11 uses 280px)  
-- Layout: Mobile international (mobintl)
-- Landscape mode: `-L` flag for proper orientation
-- Colors: Semi-transparent background on Wayland for better visibility
-- Command flags: `-H` for height (not `--height`)
-
-These settings can be adjusted in the `toggle_virtual_keyboard()` method in `kiosk_browser.py`.
+They use real child processes in place of wvkbd. Actual touch events, compositor
+resizing, keyboard positioning, and key delivery from wvkbd still require a
+Raspberry Pi touchscreen session.

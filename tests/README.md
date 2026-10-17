@@ -60,15 +60,23 @@ Tests virtual keyboard (wvkbd) functionality on Raspberry Pi.
 
 **Features:**
 - Environment detection (Wayland vs X11)
-- wvkbd installation check and auto-install
-- Process management testing
-- Compact keyboard testing (180px/160px height)
-- Bottom-anchored positioning test
-- Overlay layer compatibility test
-- Manual test command suggestions
-- Troubleshooting guidance
+- Installation check with instructions; never installs packages automatically
+- Compact 180px keyboard in portrait and landscape orientations
+- Five-second manual visibility and typing check
+- Stops only its own child process, including when interrupted
 
 **Raspberry Pi Only** - This test is designed for Pi hardware with touchscreen support.
+
+### `test_touch_keyboard.py`
+Headless Qt regression tests for keyboard startup and cancellation, owned-process
+cleanup, failure reporting, bounded diagnostics, fullscreen restoration, and
+responsive touch-target geometry. Includes a real WebEngine text-field focus
+test and fullscreen shortcuts with page focus. Child processes substitute for
+wvkbd, so this does not validate the Wayland compositor or physical touch input.
+
+```bash
+python -m unittest discover -s tests -p test_touch_keyboard.py -v
+```
 
 ### `test_home_assistant_storage.py`
 Interactive GUI test for Home Assistant login persistence.
