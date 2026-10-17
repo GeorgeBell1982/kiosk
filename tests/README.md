@@ -4,6 +4,18 @@ Verification and testing utilities for the Office Kiosk Browser.
 
 ## Available Tests
 
+### `test_radio_player.py`
+Offline tests run the radio JavaScript in Qt WebEngine with deterministic audio
+and timer substitutes. Covers station selection, play/stop, backoff, stalled
+streams, stale events/promises, online recovery, volume, missing MP3 support,
+policy errors, panel reuse, browser navigation and application shutdown. Requires
+PyQt6 and PyQt6-WebEngine. Live station availability is not part of this suite.
+
+```bash
+python -m unittest discover -s tests -p test_radio_player.py -v
+```
+
+
 ### `test_installation_scripts.py`
 Tests launcher argument and exit-code handling, dependency failures, graphical
 session checks, desktop-entry quoting, unattended installation, and safe autostart

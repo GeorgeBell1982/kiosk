@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; media-src https:; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>South African Radio</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; padding: 16px; background: #243447; color: #fff;
+       font: 16px 'Segoe UI', sans-serif; }
+h1 { font-size: 23px; margin: 0 0 12px; }
+#stations { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 10px; }
+button { min-height: 52px; padding: 10px; border: 2px solid transparent; border-radius: 8px;
+         background: #405573; color: #fff; font: inherit; cursor: pointer; touch-action: manipulation; }
+button[aria-pressed="true"] { background: #6350a3; border-color: #c4b5fd; }
+button:focus-visible { outline: 3px solid #facc15; outline-offset: 2px; }
+button:disabled { opacity: .5; cursor: default; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 16px; }
+#play { background: #166b50; min-width: 90px; }
+#stop { background: #943e47; min-width: 90px; }
+input { width: 140px; height: 44px; vertical-align: middle; }
+#status { min-height: 2.5em; line-height: 1.4; }
+.hint { color: #cbd5e1; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>South African Radio</h1>
+<div id="stations" aria-label="Radio stations"></div>
+<div class="controls">
+  <button id="play" type="button">Play</button>
+  <button id="stop" type="button" disabled>Stop</button>
+  <label for="volume">Volume <input id="volume" type="range" min="0" max="100" value="70"></label>
+</div>
+<p id="status" role="status" aria-live="polite">Choose a station, or press Play for Jacaranda FM.</p>
+<p class="hint">Radio keeps playing when you hide this panel. Stop ends playback and reconnect attempts.</p>
+<script>
+/* STATIONS */
+/* PLAYER */
+</script>
+</body>
+</html>

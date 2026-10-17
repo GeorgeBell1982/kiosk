@@ -30,8 +30,8 @@ changing display settings, prompting for input, or running duplicate update chec
 ## ✨ Features
 
 - **Modern Web Browser**: Full Qt6 WebEngine with YouTube, social media support
-- **Quick Access Shortcuts**: Home Assistant, YouTube Music, Radio Browser, Google, YouTube
-- **Radio Station Icons**: Beautiful custom and official icons for popular radio stations
+- **Quick Access Shortcuts**: Home Assistant, YouTube Music, South African Radio, Google, YouTube
+- **Built-in Radio**: South African station buttons, play/stop, volume and automatic reconnect
 - **Touchscreen Optimized**: Large buttons, virtual keyboard, gesture support
 - **Raspberry Pi Ready**: Auto-detects Pi hardware, optimized for 1024x600 displays
 - **Kiosk Mode**: Fullscreen interface with quick shortcuts to common sites
@@ -55,24 +55,31 @@ AUTO_UPDATE_APPLY=true   # Apply updates automatically (no prompts)
 
 For complete details, see: **[🔄 Automatic Updates Guide](docs/AUTOMATIC_UPDATES.md)**
 
-## � Radio Station Icons
+## South African Radio
 
-The kiosk features **professional radio station icons** with both official and custom designs:
+Tap **RADIO** in the toolbar, then a station button to listen. The built-in panel
+includes Jacaranda FM, 947, Kfm 94.5, 702 and HOT 102.7 FM.
+**Play** starts the selected station; **Stop** cancels playback and all reconnect
+attempts. Volume applies to the radio only. Playback starts only after a tap.
 
-- **Automatic Favicon Fetching**: Downloads official station icons where available
-- **Custom SVG Icons**: Beautiful gradients and radio wave graphics for all stations
-- **Brand Recognition**: Proper station branding improves user experience
-- **Fallback System**: Ensures all stations always have appropriate icons
+**Hide radio — keep listening** lets you use the browser while listening. Closing
+the panel also hides it; reopen it with RADIO. Closing or restarting the kiosk
+stops the radio. Stations and volume are kept while the application is running.
 
-**Supported Stations:**
-- 🎵 Jakaranda FM (Custom purple/green gradient)
-- 📻 94.7 Highveld Stereo (Custom red/orange gradient)
-- 🎶 KFM 94.5 (Custom blue/green gradient)
-- 🗣️ Talk Radio 702 (Custom dark blue/gray gradient)
-- ☁️ Sky Radio Hits (Official favicon + purple/orange)
-- 🎧 Qmusic Non-Stop (Official favicon + pink/orange)
+Interrupted or stalled streams reconnect automatically with delays increasing
+from 1 second to a maximum of 30 seconds. A 20-second watchdog covers connections
+that never start or stop making progress. Stop or a station change cancels the
+old connection immediately. Broadcaster outages can still prevent playback.
 
-**Icon Creation**: Use `python scripts/create_radio_icons.py` to regenerate icons
+The player uses existing Qt WebEngine HTML5 audio, with no extra packages or
+external website controls. The installed WebEngine must support MP3; if it does
+not, the panel reports it. HTTPS media is allowed only in the isolated radio
+page; the main browser's local-file and mixed-content restrictions stay enabled.
+
+Stream addresses are in `STATIONS` in `radio_player.py`. Use public HTTPS direct
+audio URLs, not website pages or playlist files. Jacaranda and HOT 102.7 FM
+use their live endpoints; other stations use StreamTheWorld's
+redirect service so CDN server changes do not require editing the kiosk.
 
 ## �📁 Project Structure
 

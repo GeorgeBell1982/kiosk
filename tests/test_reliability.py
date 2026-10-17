@@ -39,7 +39,18 @@ class BrowserReliabilityTests(unittest.TestCase):
         loop = QEventLoop()
         QTimer.singleShot(50, loop.quit)
         loop.exec()
-        self.storage.cleanup()
+        # Chromium releases profile files asynchronously on Windows, even after
+        # QObject destruction. Keep cleanup bounded without ignoring failures.
+        for attempt in range(20):
+            try:
+                self.storage.cleanup()
+                break
+            except OSError:
+                if attempt == 19:
+                    raise
+                loop = QEventLoop()
+                QTimer.singleShot(100, loop.quit)
+                loop.exec()
 
     def test_profile_supports_persistent_logins(self):
         profile = self.browser.web_view.page().profile()
