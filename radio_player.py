@@ -33,12 +33,14 @@ def radio_home_html():
         return f'<img class="station-icon" src="data:{mime};base64,{data}" alt="">'
 
     buttons = "\n".join(
-        f'<a href="#station/{index}" data-station="{index}">{icon(station["icon"])}'
+        f'<div class="station-tile" data-station="{index}" role="group">'
+        f'<a class="station-select" href="#station/{index}">{icon(station["icon"])}'
         f'<span class="station-name">{escape(station["name"])}</span>'
         '<svg class="playing-icon" viewBox="0 0 24 24" aria-hidden="true">'
         '<path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/>'
         '<path d="M16 8q4 4 0 8m3-11q7 7 0 14" fill="none" '
         'stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></a>'
+        f'<a class="station-toggle" href="#station/{index}">Play</a></div>'
         for index, station in enumerate(STATIONS))
     return (Path(__file__).with_name("radio_home.html").read_text(encoding="utf-8")
             .replace("<!-- STATIONS -->", buttons)
@@ -56,7 +58,7 @@ def radio_html():
 class RadioDialog(QDialog):
     """Hiding the panel preserves playback; shutting down releases its page."""
 
-    playbackChanged = pyqtSignal(int, bool)
+    playbackChanged = pyqtSignal(int, bool, bool)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -73,7 +75,8 @@ class RadioDialog(QDialog):
         self._ready = False
         self._pending_station = None
         self._shutting_down = False
-        self._last_playback = (-1, False)
+        self._last_playback = (-1, False, False)
+        self._command_serial = 0
         self._state_timer = QTimer(self)
         self._state_timer.setInterval(500)
         self._state_timer.timeout.connect(self._poll_playback)
@@ -88,9 +91,18 @@ class RadioDialog(QDialog):
         layout.addWidget(hide)
 
     def play_station(self, index):
+        self._set_station(index, True)
+
+    def stop_station(self, index):
+        self._set_station(index, False)
+
+    def _set_station(self, index, wanted):
         if not 0 <= index < len(STATIONS):
             raise ValueError("Unknown radio station")
-        self._pending_station = index
+        self._command_serial += 1
+        self._pending_station = (index, wanted)
+        self._last_playback = (index, False, wanted)
+        self.playbackChanged.emit(*self._last_playback)
         if self._ready:
             self._on_loaded(True)
 
@@ -101,19 +113,23 @@ class RadioDialog(QDialog):
         if ok:
             self._state_timer.start()
         if ok and self._pending_station is not None:
-            index = self._pending_station
+            index, wanted = self._pending_station
             self._pending_station = None
-            self.view.page().runJavaScript(f"selectStation({index})")
+            command = (f"if (selected !== {index} || !wanted) selectStation({index})"
+                       if wanted else f"selected = {index}; stopRadio()")
+            self.view.page().runJavaScript(command)
 
     def _poll_playback(self):
         if self._ready and not self._shutting_down:
+            serial = self._command_serial
             self.view.page().runJavaScript(
-                "({station: selected, playing: isPlaying})", self._receive_playback)
+                "({station: selected, playing: isPlaying, wanted: wanted})",
+                lambda state: self._receive_playback(state, serial))
 
-    def _receive_playback(self, state):
-        if self._shutting_down or not isinstance(state, dict):
+    def _receive_playback(self, state, serial):
+        if self._shutting_down or serial != self._command_serial or not isinstance(state, dict):
             return
-        current = (int(state["station"]), bool(state["playing"]))
+        current = (int(state["station"]), bool(state["playing"]), bool(state["wanted"]))
         if current != self._last_playback:
             self._last_playback = current
             self.playbackChanged.emit(*current)
@@ -121,7 +137,7 @@ class RadioDialog(QDialog):
     def shutdown(self):
         self._shutting_down = True
         self._state_timer.stop()
-        self.playbackChanged.emit(-1, False)
+        self.playbackChanged.emit(-1, False, False)
         self._pending_station = None
         # Muting is synchronous even if the renderer is busy or unavailable.
         self.view.page().setAudioMuted(True)

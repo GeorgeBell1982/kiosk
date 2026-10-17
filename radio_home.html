@@ -8,39 +8,50 @@
 <style>
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
-body { padding: 12px; background: #202d3d; font: 600 22px 'Segoe UI', sans-serif; }
-nav { display: flex; flex-direction: column; gap: 16px; height: 100%; }
+body { padding: 12px; background: #202d3d; font: 600 20px 'Segoe UI', sans-serif; }
+nav { display: flex; flex-direction: column; gap: 12px; height: 100%; }
 .primary { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
            grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 12px; flex: 1; min-height: 0; }
-.primary a { grid-column: span 2; }
-.primary a:nth-child(4) { grid-column: 2 / span 2; }
+.station-tile { grid-column: span 2; display: flex; flex-direction: column;
+                min-height: 94px; padding: 6px 10px; gap: 2px; }
+.primary .station-tile:nth-child(4) { grid-column: 2 / span 2; }
 .secondary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
              padding-top: 12px; border-top: 1px solid #405064; flex: 0 0 76px; }
-a { position: relative; display: flex; align-items: center; justify-content: flex-start;
-    gap: 14px; min-height: 72px; padding: 12px 30px 12px 14px; border: 2px solid #46596f;
+.station-tile, .secondary a { position: relative; display: flex; align-items: center; justify-content: flex-start;
+    border: 2px solid #46596f;
     border-radius: 16px; background: #34465b; color: #f5f7fb;
     text-align: left; text-decoration: none; touch-action: manipulation; }
-a:active { background: #435b74; }
+.station-tile:active, .secondary a:active { background: #435b74; }
 a:focus-visible { outline: 3px solid #facc15; outline-offset: -5px; }
-a.is-playing { border-color: #5ee3be; background: #284b4c; }
-.station-icon { width: 56px; height: 56px; flex: 0 0 56px; object-fit: contain;
+.station-icon { width: 48px; height: 48px; flex: 0 0 48px; object-fit: contain;
                 background: #202d3d; border-radius: 10px; padding: 5px; }
+.station-select { display: flex; align-items: center; gap: 12px; flex: 1;
+                  width: 100%; min-height: 44px; color: inherit; text-decoration: none;
+                  border-radius: 8px; touch-action: manipulation; }
+.station-toggle { display: none; align-items: center; justify-content: center;
+                  flex: 0 0 44px; min-height: 44px; width: 100%; color: #fff;
+                  border-radius: 8px; background: #526c86; text-decoration: none;
+                  font-size: 17px; touch-action: manipulation; }
+.is-selected .station-toggle { display: flex; }
+.station-tile.is-selected { border-color: #8cabc8; }
+.station-tile.is-playing { border-color: #5ee3be; background: #284b4c; }
 .station-name { min-width: 0; overflow-wrap: anywhere; }
 .playing-icon { position: absolute; right: 8px; top: 8px; width: 18px; height: 18px;
                 color: #89f0d1; visibility: hidden; }
-a.is-playing .playing-icon { visibility: visible; }
-.secondary a { min-height: 60px; padding: 8px 12px; font-size: 18px; background: #2a3a4d; }
+.station-tile.is-playing .playing-icon { visibility: visible; }
+.secondary a { gap: 10px; min-height: 60px; padding: 8px 12px; font-size: 18px; background: #2a3a4d; }
 .secondary .station-icon { width: 36px; height: 36px; flex-basis: 36px; padding: 3px; }
 @media (max-width: 480px) {
-    body { font-size: 17px; padding: 8px; }
-    nav { gap: 10px; }
+    body { font-size: 15px; padding: 8px; }
+    nav { gap: 8px; }
     .primary { grid-template-columns: repeat(4, minmax(0, 1fr));
-               grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 8px; }
-    .primary a:nth-child(4) { grid-column: span 2; }
-    .primary a:nth-child(5) { grid-column: 2 / span 2; }
-    a { gap: 8px; padding: 8px 20px 8px 8px; border-radius: 12px; }
-    .station-icon { width: 40px; height: 40px; flex-basis: 40px; padding: 3px; }
-    .secondary { gap: 8px; padding-top: 8px; flex-basis: 68px; }
+               grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 4px; }
+    .primary .station-tile:nth-child(4) { grid-column: span 2; }
+    .primary .station-tile:nth-child(5) { grid-column: 2 / span 2; }
+    .station-tile { padding: 3px 6px; border-radius: 12px; }
+    .station-select { gap: 6px; }
+    .station-icon { width: 32px; height: 32px; flex-basis: 32px; padding: 3px; }
+    .secondary { gap: 8px; padding-top: 8px; flex-basis: 66px; }
     .secondary a { font-size: 16px; min-height: 56px; padding: 6px; gap: 6px; }
     .secondary .station-icon { width: 30px; height: 30px; flex-basis: 30px; padding: 2px; }
     .playing-icon { width: 14px; height: 14px; right: 4px; top: 4px; }

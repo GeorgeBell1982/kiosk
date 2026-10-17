@@ -76,6 +76,8 @@ class KioskBrowser(QMainWindow):
         self.closing = False
         self.radio_dialog = None
         self.playing_station = -1
+        self.selected_radio_station = -1
+        self.radio_wanted = False
         
         # Log version information
         version_info = get_full_version_info()
@@ -709,7 +711,7 @@ class KioskBrowser(QMainWindow):
         
         logging.info("Qt6 WebEngine setup complete with modern compatibility")
         
-    def show_radio(self):
+    def get_radio_dialog(self):
         if not WEBENGINE_AVAILABLE:
             QMessageBox.warning(self, "Radio unavailable", "Radio requires PyQt6-WebEngine.")
             return
@@ -717,6 +719,11 @@ class KioskBrowser(QMainWindow):
             from radio_player import RadioDialog
             self.radio_dialog = RadioDialog(self)
             self.radio_dialog.playbackChanged.connect(self.on_radio_playback)
+        return self.radio_dialog
+
+    def show_radio(self):
+        if self.get_radio_dialog() is None:
+            return
         available = self.screen().availableGeometry()
         self.radio_dialog.resize(min(720, available.width()), min(520, available.height()))
         self.radio_dialog.show()
@@ -724,11 +731,17 @@ class KioskBrowser(QMainWindow):
         self.radio_dialog.activateWindow()
 
     def play_radio_station(self, index):
-        self.show_radio()
-        if self.radio_dialog is not None:
-            self.radio_dialog.play_station(index)
+        dialog = self.get_radio_dialog()
+        if dialog is not None:
+            dialog.play_station(index)
 
-    def on_radio_playback(self, station, playing):
+    def stop_radio_station(self, index):
+        if self.radio_dialog is not None and self.selected_radio_station == index:
+            self.radio_dialog.stop_station(index)
+
+    def on_radio_playback(self, station, playing, wanted):
+        self.selected_radio_station = station
+        self.radio_wanted = wanted
         self.playing_station = station if playing else -1
         self.sync_radio_home()
 
@@ -740,13 +753,21 @@ class KioskBrowser(QMainWindow):
             return
         self.web_view.page().runJavaScript("""
             document.querySelectorAll('[data-station]').forEach(button => {
-                const active = Number(button.dataset.station) === %d;
+                const index = Number(button.dataset.station);
+                const active = index === %d;
+                const selected = index === %d;
+                const wanted = %s;
+                button.classList.toggle('is-selected', selected);
                 button.classList.toggle('is-playing', active);
                 button.setAttribute('aria-current', String(active));
                 const name = button.querySelector('.station-name').textContent;
                 button.setAttribute('aria-label', name + (active ? ' — Playing' : ''));
+                const control = button.querySelector('.station-toggle');
+                control.textContent = wanted ? 'Stop' : 'Play';
+                control.href = '#' + (wanted ? 'stop/' : 'station/') + index;
+                control.setAttribute('aria-label', (wanted ? 'Stop ' : 'Play ') + name);
             });
-        """ % self.playing_station)
+        """ % (self.playing_station, self.selected_radio_station, "true" if self.radio_wanted else "false"))
 
     def load_home_page(self):
         """Show station buttons immediately, without a welcome banner or scrolling."""
@@ -786,10 +807,13 @@ class KioskBrowser(QMainWindow):
         home_url = url.adjusted(QUrl.UrlFormattingOption.RemoveFragment)
         if home_url == QUrl(HOME_URL):
             for index in range(len(STATIONS)):
-                if url.fragment() == f"station/{index}":
+                if url.fragment() in (f"station/{index}", f"stop/{index}"):
                     # Fragment links keep the home page in place and avoid a network load.
                     self.web_view.page().runJavaScript("history.replaceState(null, '', '/')")
-                    self.play_radio_station(index)
+                    if url.fragment() == f"stop/{index}":
+                        self.stop_radio_station(index)
+                    else:
+                        self.play_radio_station(index)
                     return
         logging.info(f"URL changed to: {url.toString()}")
         
