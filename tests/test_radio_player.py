@@ -175,8 +175,8 @@ class RadioTests(unittest.TestCase):
     def test_home_station_buttons_fit_without_scrolling(self):
         from radio_player import HOME_URL, radio_home_html
         self.view.setHtml(radio_home_html(), QUrl(HOME_URL))
-        self.wait_until(lambda: self.js("document.querySelectorAll('.station-select, .secondary a').length === 7"))
-        self.wait_until(lambda: self.js("[...document.querySelectorAll('nav img')].length === 7 && "
+        self.wait_until(lambda: self.js(f"document.querySelectorAll('.station-select, .secondary a').length === {len(STATIONS) + 2}"))
+        self.wait_until(lambda: self.js(f"[...document.querySelectorAll('nav img')].length === {len(STATIONS) + 2} && "
                                        "[...document.querySelectorAll('nav img')].every(img => "
                                        "img.complete && img.naturalWidth > 0)"))
         for width, height in ((1000, 350), (776, 350), (340, 400)):
@@ -184,7 +184,7 @@ class RadioTests(unittest.TestCase):
                 self.view.resize(width, height)
                 self.view.show()
                 self.app.processEvents()
-                self.js("document.querySelector('[data-station=\"4\"]').classList.add('is-selected')")
+                self.js("document.querySelector('.primary .station-tile:last-child').classList.add('is-selected')")
                 self.assertTrue(self.js("[...document.querySelectorAll('.station-select, .secondary a')].every(b => {"
                                         "const r = b.getBoundingClientRect();"
                                         "return r.height >= 44 && r.left >= 0 && r.top >= 0 && "
@@ -202,30 +202,31 @@ class RadioTests(unittest.TestCase):
 
     def test_home_station_click_starts_player_and_keeps_home_visible(self):
         from radio_player import HOME_URL
+        groot_index = next(i for i, station in enumerate(STATIONS) if station["name"] == "GROOTfm 90.5")
         with tempfile.TemporaryDirectory() as storage:
             with patch("kiosk_browser.os.path.expanduser", return_value=storage), \
                     patch.object(KioskBrowser, "check_for_updates"):
                 browser = KioskBrowser()
             try:
-                self.wait_until(lambda: self.js("document.querySelectorAll('.station-select, .secondary a').length === 7",
+                self.wait_until(lambda: self.js(f"document.querySelectorAll('.station-select, .secondary a').length === {len(STATIONS) + 2}",
                                                 browser.web_view))
                 with patch("radio_player.radio_html", return_value=radio_html().replace(
                         '"use strict";', HARNESS + '\n"use strict";')):
-                    self.js("document.querySelectorAll('.station-select')[4].click()", browser.web_view)
+                    self.js(f"document.querySelectorAll('.station-select')[{groot_index}].click()", browser.web_view)
                     self.wait_until(lambda: browser.radio_dialog is not None)
                 dialog = browser.radio_dialog
                 self.assertFalse(dialog.isVisible(), "Station tiles must not open the radio panel")
                 self.wait_until(lambda: self.js("typeof wanted !== 'undefined' && wanted", dialog.view))
-                self.assertEqual(self.js("audio.src", dialog.view), STATIONS[4]["url"])
+                self.assertEqual(self.js("audio.src", dialog.view), STATIONS[groot_index]["url"])
                 self.assertEqual(browser.web_view.url(), QUrl(HOME_URL))
-                self.js("document.querySelectorAll('.station-select')[4].click()", browser.web_view)
+                self.js(f"document.querySelectorAll('.station-select')[{groot_index}].click()", browser.web_view)
                 self.assertEqual(self.js("instances.length", dialog.view), 1)
                 self.assertEqual(self.js("document.querySelector('.is-selected .station-toggle').textContent", browser.web_view), "Stop")
                 self.js("document.querySelector('.is-selected .station-toggle').click()", browser.web_view)
                 self.wait_until(lambda: not self.js("wanted", dialog.view))
                 self.assertEqual(self.js("document.querySelector('.is-selected .station-toggle').textContent", browser.web_view), "Play")
                 self.js("document.querySelector('.is-selected .station-toggle').click()", browser.web_view)
-                self.wait_until(lambda: self.js("selected === 4 && wanted", dialog.view))
+                self.wait_until(lambda: self.js(f"selected === {groot_index} && wanted", dialog.view))
                 self.js("document.querySelectorAll('.station-select')[1].click()", browser.web_view)
                 self.wait_until(lambda: self.js("selected === 1 && wanted", dialog.view))
                 self.assertIs(browser.radio_dialog, dialog)

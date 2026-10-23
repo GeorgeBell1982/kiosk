@@ -53,7 +53,7 @@ The icons scale proportionally based on button size for optimal visibility on 10
 
 ## Home-page station logos
 
-The home page embeds these bundled PNG logos as data URLs, so rendering does not
+The home page embeds these bundled logos as data URLs, so rendering does not
 contact station websites. Names remain visible alongside every logo.
 
 Downloaded from the stations' official sites on 2026-10-17:
@@ -67,3 +67,8 @@ Downloaded from the stations' official sites on 2026-10-17:
 Sky Radio and Qmusic reuse the embedded favicons in `radio-sky.svg` and
 `radio-qmusic.svg`. The older custom South African SVGs remain for legacy uses.
 Station names and logos belong to their respective owners.
+
+Added on 2026-10-23: `radio-groot.jpg` from Groot FM's official iono.fm player:
+https://cdn.iono.fm/files/p274/logo_274_20250908_202204_350.jpeg
+The broadcaster links to https://iframe.iono.fm/s/330; its playlist at
+https://iframe.iono.fm/playlists/stream/330 lists the direct MP3 stream.

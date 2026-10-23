@@ -19,6 +19,7 @@ STATIONS = [
     {"name": "Kfm 94.5", "icon": "radio-kfm.png", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/KFM.mp3"},
     {"name": "702", "icon": "radio-702.png", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/FM702.mp3"},
     {"name": "HOT 102.7 FM", "icon": "radio-hot.png", "url": "https://edge.iono.fm/xice/57_high.mp3"},
+    {"name": "GROOTfm 90.5", "icon": "radio-groot.jpg", "url": "https://edge.iono.fm/xice/330_medium.mp3"},
 ]
 
 
@@ -28,7 +29,7 @@ HOME_URL = "https://home.office-kiosk.invalid/"
 def radio_home_html():
     def icon(filename):
         path = Path(__file__).with_name("icons") / filename
-        mime = "image/svg+xml" if path.suffix == ".svg" else "image/png"
+        mime = {".svg": "image/svg+xml", ".jpg": "image/jpeg"}.get(path.suffix, "image/png")
         data = base64.b64encode(path.read_bytes()).decode("ascii")
         return f'<img class="station-icon" src="data:{mime};base64,{data}" alt="">'
 

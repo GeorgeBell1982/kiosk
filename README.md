@@ -59,7 +59,7 @@ For complete details, see: **[🔄 Automatic Updates Guide](docs/AUTOMATIC_UPDAT
 
 Tap a station on the home page to listen without opening a popup. The selected
 tile shows **Stop** while connecting or playing, and **Play** after stopping.
-Open **RADIO** in the toolbar for volume and the full player. The player includes Jacaranda FM, 947, Kfm 94.5, 702 and HOT 102.7 FM.
+Open **RADIO** in the toolbar for volume and the full player. The player includes Jacaranda FM, 947, Kfm 94.5, 702, HOT 102.7 FM and GROOTfm 90.5.
 The home page uses matching station tiles, with other radio websites in a smaller
 bottom row. A green border and speaker symbol show which station is playing.
 **Play** starts the selected station; **Stop** cancels playback and all reconnect
